@@ -1,4 +1,4 @@
-import { CARS, DRIVERS, TRACKS, applyUpgrades } from "./data.js?v=tracks2";
+import { CARS, DRIVERS, TRACKS, applyUpgrades } from "./data.js?v=airace1";
 
 const SEG = 200;
 const ROAD = 2100;
@@ -914,9 +914,13 @@ export class GameEngine {
     const player = this.player;
     const playerMax = this.maxSpeed(player);
     const playerSpeed = player.speed || 0;
-    const playerProg = this.progress(player);
     const boosting = (player.nitroBurst || 0) > 0;
-    const ref = boosting ? Math.min(playerSpeed, playerMax) : playerSpeed;
+    // Mild pack reference — never zero if the player stalls at the line.
+    const packRef = Math.max(
+      playerSpeed * (boosting ? 0.92 : 1),
+      playerMax * 0.55,
+      2200,
+    );
     const kLane = 1 - Math.exp(-2.2 * dt);
     const kX = 1 - Math.exp(-2.8 * dt);
     const kSteer = 1 - Math.exp(-7 * dt);
@@ -927,23 +931,28 @@ export class GameEngine {
       const bend = Math.max(Math.abs(here.curve), Math.abs(look.curve));
       const corner = clamp(bend / 5.2, 0, 1);
 
-      const paceMul = 0.90 + c.skill * 0.05 + ((c.aiIndex || 0) % 5) * 0.022;
-      let target = ref * paceMul;
-      target *= 1 - corner * (0.07 + (1 - c.skill) * 0.05);
-      const cap = Math.max(1, ref * 1.08);
+      // Each rival has their own race pace and keeps racing even if you don't launch.
+      const selfMax = this.maxSpeed(c);
+      const paceMul = 0.84 + c.skill * 0.12 + ((c.aiIndex || 0) % 5) * 0.018;
+      let cruise = selfMax * paceMul;
+      cruise *= 1 - corner * (0.08 + (1 - c.skill) * 0.06);
+      // Blend a little with the pack so the field stays together, without freezing.
+      let target = cruise * 0.72 + packRef * paceMul * 0.28;
+      const cap = Math.max(cruise * 1.06, selfMax * 0.98, packRef * 1.02);
 
       // Same-ribbon gap only (ignore full-lap progress jumps).
       const raceGap = wrapDist(c.z, player.z, len);
       const slot = Math.min(c.slot || 0, len * 0.35);
       const slotErr = raceGap - slot;
-      if (raceGap > 5000) target *= 0.82;
-      else if (slotErr > 1800) target *= 0.88;
-      else if (slotErr > 700) target *= 0.94;
-      else if (raceGap < -2800) target = Math.min(cap, ref * 1.04);
-      else if (slotErr < -1800) target *= 1.04;
+      if (raceGap > 5000) target *= 0.86;
+      else if (slotErr > 1800) target *= 0.91;
+      else if (slotErr > 700) target *= 0.96;
+      else if (raceGap < -2800) target = Math.min(cap, target * 1.08);
+      else if (slotErr < -1800) target *= 1.05;
       else if (slotErr < -700) target *= 1.02;
 
-      target = clamp(target, ref * 0.78, Math.min(ref * 1.06, cap));
+      const floor = Math.max(selfMax * 0.42, 1600);
+      target = clamp(target, floor, cap);
 
       if (c.speed < target) c.speed += 3400 * c.spec.accel * (1 - corner * 0.35) * dt;
       else c.speed -= (420 + corner * 920) * dt;
