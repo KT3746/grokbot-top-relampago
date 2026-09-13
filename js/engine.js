@@ -1,4 +1,4 @@
-import { CARS, DRIVERS, TRACKS, applyUpgrades } from "./data.js?v=fixmusic1";
+import { CARS, DRIVERS, TRACKS, applyUpgrades } from "./data.js?v=tracks2";
 
 const SEG = 200;
 const ROAD = 2100;
@@ -932,17 +932,18 @@ export class GameEngine {
       target *= 1 - corner * (0.07 + (1 - c.skill) * 0.05);
       const cap = Math.max(1, ref * 1.08);
 
-      const raceGap = this.progress(c) - playerProg;
-      const slot = c.slot || 0;
+      // Same-ribbon gap only (ignore full-lap progress jumps).
+      const raceGap = wrapDist(c.z, player.z, len);
+      const slot = Math.min(c.slot || 0, len * 0.35);
       const slotErr = raceGap - slot;
-      if (raceGap > 8200) target *= 0.72;
-      else if (slotErr > 2200) target *= 0.78;
-      else if (slotErr > 900) target *= 0.88;
-      else if (raceGap < -3500) target = Math.min(cap, ref * 1.06);
-      else if (slotErr < -2200) target *= 1.06;
-      else if (slotErr < -900) target *= 1.03;
+      if (raceGap > 5000) target *= 0.82;
+      else if (slotErr > 1800) target *= 0.88;
+      else if (slotErr > 700) target *= 0.94;
+      else if (raceGap < -2800) target = Math.min(cap, ref * 1.04);
+      else if (slotErr < -1800) target *= 1.04;
+      else if (slotErr < -700) target *= 1.02;
 
-      target = clamp(target, ref * 0.72, Math.min(ref * 1.10, cap));
+      target = clamp(target, ref * 0.78, Math.min(ref * 1.06, cap));
 
       if (c.speed < target) c.speed += 3400 * c.spec.accel * (1 - corner * 0.35) * dt;
       else c.speed -= (420 + corner * 920) * dt;
@@ -1068,7 +1069,7 @@ export class GameEngine {
       car._drawX = null;
     }
     if (dz) {
-      dz = clamp(dz, -28, 28);
+      dz = clamp(dz, -12, 12);
       car.z = wrapZ(car.z + dz, len);
       car._drawX = null;
       car._drawY = null;
@@ -1087,7 +1088,18 @@ export class GameEngine {
 
   aiDepth(car) {
     const len = this.track.length;
-    return wrapDist(car.z, this.player.z, len);
+    let d = wrapDist(car.z, this.player.z, len);
+    // Cars a lap ahead/behind share the same ribbon Z — without this they
+    // "teleport" next to the player when they cross the line.
+    if (this.player && car && !car.human) {
+      const progGap = this.progress(car) - this.progress(this.player);
+      if (progGap > len * 0.5) {
+        d = d > 0 ? Math.max(d, len * 0.55) : len * 0.55;
+      } else if (progGap < -len * 0.5) {
+        d = d < 0 ? Math.min(d, -len * 0.55) : -len * 0.55;
+      }
+    }
+    return d;
   }
 
   pixelClearX(car) {
@@ -1180,11 +1192,13 @@ export class GameEngine {
     const vsPlayer = a.human || b.human;
     if (vsPlayer) {
       const ai = a.human ? b : a;
+      const len = this.track.length;
+      if (Math.abs(this.progress(ai) - this.progress(this.player)) > len * 0.45) return false;
       const dz = this.aiDepth(ai);
       const ax = Math.abs(ai.x - (this.playerX ?? this.player.x));
-      if (dz > -CAR_HALF_L * 1.4 && dz < CAR_HALF_L * 2.4 && ax < CAR_HALF_W * 3.8) return true;
-      if (Math.abs(dz) < CAR_HALF_L * 1.3 && ax < CAR_HALF_W * 4.0) return true;
-      if (ax < 0.72) return this.spriteHitsPlayer(ai);
+      if (dz > -CAR_HALF_L * 1.2 && dz < CAR_HALF_L * 2.0 && ax < CAR_HALF_W * 3.2) return true;
+      if (Math.abs(dz) < CAR_HALF_L * 1.1 && ax < CAR_HALF_W * 3.4) return true;
+      if (ax < 0.62 && dz > -200 && dz < 900) return this.spriteHitsPlayer(ai);
       return false;
     }
     return adz < CAR_HALF_L * 2 && adx < CAR_HALF_W * 2;
@@ -1203,10 +1217,8 @@ export class GameEngine {
     const adx = Math.abs(ai.x - this.playerX);
     const side = Math.sign(ai.x - this.playerX) || (1 - 2 * ((ai.aiIndex || 0) % 2));
     const needX = Math.min(this.pixelClearX(ai), 0.42);
-    if (adx < needX) this.shiftAI(ai, side * Math.min(needX - adx + 0.03, 0.16), 0);
-    if (dz > 0 && adz < CAR_HALF_L * 1.1) {
-      this.shiftAI(ai, 0, Math.min(CAR_HALF_L * 1.1 - adz + 4, 18));
-    }
+    if (adx < needX) this.shiftAI(ai, side * Math.min(needX - adx + 0.04, 0.14), 0);
+    // No longitudinal shove — that looked like teleporting.
   }
 
   unstickPair(a, b) {
@@ -1229,7 +1241,6 @@ export class GameEngine {
     // Prefer lane separation; tiny forward nudge only if still stacked.
     this.shiftAI(a, Math.sign(dx || 1) * shoveX * 0.55, 0);
     this.shiftAI(b, -Math.sign(dx || 1) * shoveX * 0.55, 0);
-    if (adz < minZ * 0.45 && !ahead.human) this.shiftAI(ahead, 0, 12);
     return true;
   }
 
@@ -1277,15 +1288,16 @@ export class GameEngine {
     if (!this.player || !this.track) return;
     const len = this.track.length;
     const p = this.player;
+    const pProg = this.progress(p);
     for (const c of this.cars) {
-      if (c.human) continue;
+      if (c.human || c.finished) continue;
+      // Different lap on the race clock → never collide / shove (stops teleports).
+      if (Math.abs(this.progress(c) - pProg) > len * 0.45) continue;
       if (!this.overlapping(p, c)) continue;
-      const dz = wrapDist(c.z, p.z, len);
       const dx = this.playerX - c.x;
       const away = Math.sign(dx) || -1;
-      // No trombada: no speed loss, shake, flash, or bump sound.
-      // Only a tiny silent separation so sprites don't stay glued.
-      this.shiftAI(c, -away * 0.05, dz > 0 ? 6 : -6);
+      // Lateral separation only — never push rivals along the track.
+      this.shiftAI(c, -away * 0.06, 0);
       this.unstickFromPlayer(c);
     }
     for (let i = 0; i < this.cars.length; i++) {
@@ -1873,6 +1885,11 @@ export class GameEngine {
       };
     }
     const len = this.track.length;
+    // Hide rivals that are ~a lap away on race progress (same ribbon Z looks like a teleport).
+    if (Math.abs(this.progress(c) - this.progress(this.player)) > len * 0.45) {
+      c._drawX = c._drawY = c._drawS = null;
+      return null;
+    }
     const segs = this.track.segs;
     const camZ = this.camZ;
     const camI = this.findSeg(camZ).index;
@@ -1895,7 +1912,7 @@ export class GameEngine {
     const dt = Math.max(0.008, this._dt || 1 / 60);
     const kX = 1 - Math.exp(-26 * dt);
     const kY = 1 - Math.exp(-40 * dt);
-    if (c._drawX == null || Math.abs(destX - c._drawX) > 96 || Math.abs(destY - c._drawY) > 72) {
+    if (c._drawX == null || Math.abs(destX - c._drawX) > 140 || Math.abs(destY - c._drawY) > 110) {
       c._drawX = destX;
       c._drawY = destY;
       c._drawS = s;
