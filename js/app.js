@@ -1,7 +1,7 @@
-import { CARS, TRACKS, UPGRADES, PRIZE, POINTS, DRIVERS, QUALIFY } from "./data.js?v=airace1";
-import { AudioBus } from "./audio.js?v=airace1";
-import { GameEngine } from "./engine.js?v=airace1";
-import { getModo } from "./modo.js?v=airace1";
+import { CARS, TRACKS, UPGRADES, PRIZE, POINTS, DRIVERS, QUALIFY } from "./data.js?v=polish3";
+import { AudioBus } from "./audio.js?v=polish3";
+import { GameEngine } from "./engine.js?v=polish3";
+import { getModo } from "./modo.js?v=polish3";
 
 const SAVE_KEY = "relampago-save";
 
@@ -926,9 +926,11 @@ class App {
     const h = this.engine.hud();
     $("hud-speed").textContent = String(h.speed);
     $("hud-speed").classList.toggle("boost", !rotateBlock && h.boosting);
+    $("hud-speed").classList.toggle("draft", !rotateBlock && h.drafting);
     $("hud-pos").innerHTML = `${h.place}<span>/${h.field}</span>`;
     $("hud-lap").innerHTML = `${h.lap}<span>/${h.laps}</span>`;
     $("hud-time").textContent = fmt(h.time);
+    if ($("hud-best")) $("hud-best").textContent = h.bestLap != null ? fmt(h.bestLap) : "—";
     if ($("hud-flag")) $("hud-flag").textContent = h.trackFlag || "🏁";
     if ($("hud-track-name")) $("hud-track-name").textContent = h.trackName || "";
     $("hud-nitro-pips")?.querySelectorAll("i").forEach((el, i) => {
