@@ -1,4 +1,4 @@
-import { CARS, DRIVERS, TRACKS, applyUpgrades } from "./data.js?v=airace1";
+import { CARS, DRIVERS, TRACKS, applyUpgrades } from "./data.js?v=polish3";
 
 const SEG = 200;
 const ROAD = 2100;
@@ -88,20 +88,30 @@ function buildTrack(def) {
   }
 
   const kinds = def.objects;
-  for (let i = 4; i < segs.length; i += 3) {
-    const side = (i % 6 === 0) ? -1 : 1;
+  for (let i = 3; i < segs.length; i += 2) {
+    const side = (i % 4 === 0) ? -1 : 1;
     const kind = kinds[(i + (side > 0 ? 1 : 0)) % kinds.length];
-    const offset = side * (1.28 + (i % 5) * 0.06);
-    const big = kind === "building" ? 2.8 : kind === "palm" || kind === "pine" ? 2.2 : 1.35;
+    const offset = side * (1.22 + (i % 7) * 0.05);
+    const big = kind === "building" ? 2.9 : kind === "palm" || kind === "pine" ? 2.35 : 1.4;
     segs[i].sprites.push({ kind, offset, scale: big });
-    segs[i].sprites.push({
-      kind: kinds[(i + 2) % kinds.length],
-      offset: -offset * (1.05 + (i % 4) * 0.04),
-      scale: big * 0.85,
-    });
+    if (i % 2 === 1) {
+      segs[i].sprites.push({
+        kind: kinds[(i + 2) % kinds.length],
+        offset: -offset * (1.08 + (i % 5) * 0.03),
+        scale: big * 0.82,
+      });
+    }
+    // Far scenery row for depth
+    if (i % 5 === 0) {
+      segs[i].sprites.push({
+        kind: kinds[(i + 1) % kinds.length],
+        offset: side * (2.05 + (i % 3) * 0.12),
+        scale: big * 1.15,
+      });
+    }
   }
-  for (let i = 70; i < segs.length - 45; i += 95) {
-    segs[i].pickup = { x: 0, taken: false };
+  for (let i = 55; i < segs.length - 40; i += 78) {
+    segs[i].pickup = { x: ((i / 78) % 2 === 0 ? -0.18 : 0.18), taken: false };
   }
   return { segs, map, length: segs.length * SEG, def };
 }
@@ -494,6 +504,9 @@ export class GameEngine {
     this.radioT = 0;
     this._fuelWarn = 0;
     this._nitroRadioLatch = false;
+    this.dust = [];
+    this.draft = 0;
+    this._lastPlace = 8;
     this.bumpCool = 0;
     this.upgrades = { engine: 0, tires: 0, nitro: 0 };
     this.playerCarId = "fenix";
@@ -642,6 +655,9 @@ export class GameEngine {
     this.laps = 1;
     this.countdown = 3;
     this.finished = false;
+    this.dust = [];
+    this.draft = 0;
+    this._lastPlace = 8;
     this.toast = "";
     this.toastT = 0;
     this.lapFlash = null;
@@ -761,8 +777,79 @@ export class GameEngine {
     this.followCamera(dt);
     this.pickups();
     this.rank();
+    {
+      const place = this.livePlace(this.player);
+      if (this._lastPlace && place < this._lastPlace && this.countdown <= 0) {
+        this.radioSay(place === 1 ? "Primeiro! Segura a ponta!" : `Passou! Agora ${place}º!`, 1.6);
+      }
+      this._lastPlace = place;
+    }
     this.checkLaps();
     if (this.bumpCool > 0) this.bumpCool -= dt;
+  }
+
+  draftBoost() {
+    if (!this.player || !this.track) return 0;
+    const len = this.track.length;
+    const p = this.player;
+    let best = 0;
+    for (const c of this.cars) {
+      if (c.human || c.finished) continue;
+      if (Math.abs(this.progress(c) - this.progress(p)) > len * 0.45) continue;
+      const dz = wrapDist(c.z, p.z, len);
+      // Rival ahead, close, same lane-ish
+      if (dz > 120 && dz < 1100 && Math.abs(c.x - this.playerX) < 0.34) {
+        const proxim = 1 - (dz - 120) / 980;
+        const align = 1 - Math.abs(c.x - this.playerX) / 0.34;
+        best = Math.max(best, proxim * align);
+      }
+    }
+    return clamp(best, 0, 1);
+  }
+
+  spawnDust(dt, off, speedPct) {
+    if (!off || speedPct < 0.18) return;
+    this.dust = this.dust || [];
+    const n = Math.min(3, 1 + Math.floor(speedPct * 3));
+    for (let i = 0; i < n; i++) {
+      this.dust.push({
+        x: (Math.random() - 0.5) * 0.55,
+        y: 0,
+        life: 0.28 + Math.random() * 0.35,
+        max: 0.55,
+        vx: (Math.random() - 0.5) * 0.4,
+        vy: -0.15 - Math.random() * 0.35,
+        r: 4 + Math.random() * 10,
+      });
+    }
+    if (this.dust.length > 48) this.dust.splice(0, this.dust.length - 48);
+  }
+
+  updateDust(dt) {
+    if (!this.dust?.length) return;
+    for (const d of this.dust) {
+      d.life -= dt;
+      d.x += d.vx * dt;
+      d.y += d.vy * dt;
+      d.r += 18 * dt;
+    }
+    this.dust = this.dust.filter((d) => d.life > 0);
+  }
+
+  drawDust(w, h) {
+    if (!this.dust?.length) return;
+    const ctx = this.ctx;
+    const baseX = this._playerDrawX != null ? this._playerDrawX : w / 2;
+    const baseY = h * 0.86;
+    ctx.save();
+    for (const d of this.dust) {
+      const a = clamp(d.life / (d.max || 0.5), 0, 1) * 0.35;
+      ctx.fillStyle = `rgba(210, 185, 130, ${a})`;
+      ctx.beginPath();
+      ctx.ellipse(baseX + d.x * 120, baseY + d.y * 90, d.r, d.r * 0.55, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
   }
 
   drivePlayer(dt) {
@@ -787,6 +874,14 @@ export class GameEngine {
 
     let max = this.maxSpeed(p);
     if (boost) max *= 1.48 + (p.spec.nitro - 1) * 0.35;
+    const draft = off ? 0 : this.draftBoost();
+    this.draft = lerp(this.draft || 0, draft, 1 - Math.exp(-6 * dt));
+    if (this.draft > 0.12) {
+      max *= 1 + this.draft * 0.14;
+      if (this.draft > 0.55 && this.toast !== "NITRO" && (this.radioT || 0) <= 0) {
+        this.radioSay("Vácuo! Colado nele!", 1.4);
+      }
+    }
     if ((p.bumpLock || 0) > 0 && p.speedAim != null) {
       max = Math.min(max, p.speedAim);
     }
@@ -814,6 +909,9 @@ export class GameEngine {
     p.speed = Math.max(0, p.speed);
 
     const speedPct = p.speed / Math.max(1, this.maxSpeed(p));
+    this.spawnDust(dt, off, speedPct);
+    this.updateDust(dt);
+    if (off && speedPct > 0.25) this.hitShake = Math.max(this.hitShake || 0, 0.25 * speedPct);
     const want = (right ? 1 : 0) - (left ? 1 : 0);
     // Easy lane changes — strong lateral move even at mid speed.
     this.steer = lerp(this.steer, want, (off ? 3.4 : 6.0) * dt);
@@ -1451,6 +1549,9 @@ export class GameEngine {
       toast: this.toastT > 0 && this.toast ? this.toast : "",
       countdown: this.countdown,
       boosting: !!(p?.nitroBurst > 0 && p?.fuel > 0 && (p?.speed || 0) > 40 && Math.abs(this.playerX) <= 1),
+      drafting: (this.draft || 0) > 0.35,
+      bestLap: this.bestLap,
+      lapTime: this.lapTime,
       finished: this.finished,
       trackName: this.track?.def?.name || "",
       trackFlag: this.track?.def?.flag || "🏁",
@@ -1879,6 +1980,7 @@ export class GameEngine {
       drawOne(s);
     }
     if (you) drawOne(you);
+    this.drawDust(w, h);
   }
 
   projectCar(c, projected, w, h, drawN) {
