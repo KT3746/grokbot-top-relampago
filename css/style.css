@@ -1119,3 +1119,12 @@ button.hud-pause,
 #btn-pause {
   display: none !important;
 }
+
+
+.speedo strong.draft {
+  color: #7cf6ff;
+  text-shadow: 0 0 16px rgba(80, 220, 255, 0.7), 0 2px 6px #000;
+}
+#hud-best { font-size: 28px; }
+body.modo-celular.racing #hud-best { font-size: 20px; }
+body.modo-celular.racing .hud-card:has(#hud-best) { display: none; }
