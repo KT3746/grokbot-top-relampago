@@ -1,7 +1,7 @@
-import { CARS, TRACKS, UPGRADES, PRIZE, POINTS, DRIVERS, QUALIFY } from "./data.js?v=polish3";
-import { AudioBus } from "./audio.js?v=polish3";
-import { GameEngine } from "./engine.js?v=polish3";
-import { getModo } from "./modo.js?v=polish3";
+import { CARS, TRACKS, UPGRADES, PRIZE, POINTS, DRIVERS, QUALIFY } from "./data.js?v=polish4";
+import { AudioBus } from "./audio.js?v=polish4";
+import { GameEngine } from "./engine.js?v=polish4";
+import { getModo } from "./modo.js?v=polish4";
 
 const SAVE_KEY = "relampago-save";
 
@@ -839,6 +839,12 @@ class App {
       if ($("results-title")) $("results-title").textContent = "Chegada";
       if ($("results-sub")) $("results-sub").textContent = `${you.place}º lugar`;
     }
+    {
+      const best = this.engine?.bestLap;
+      if (best != null && $("results-sub") && !$("results-sub").textContent.includes("Melhor volta")) {
+        $("results-sub").textContent += ` · Melhor volta ${fmt(best)}`;
+      }
+    }
     this.show("results");
   }
 
@@ -937,6 +943,12 @@ class App {
       el.classList.toggle("on", i < (h.nitroCharges || 0));
     });
     $("hud-nitro-pips")?.classList.toggle("hot", !rotateBlock && h.boosting);
+    const nitroLabel = $("hud-nitro-label");
+    if (nitroLabel) {
+      const n = h.nitroCharges ?? 0;
+      if (this.phone) nitroLabel.textContent = `Nitro · ${n}`;
+      else nitroLabel.innerHTML = `Nitro <kbd>Shift</kbd> <kbd>Espaço</kbd> · ${n}`;
+    }
     $("hud-fuel").style.width = `${Math.round(h.fuel * 100)}%`;
     const toast = $("toast");
     const showToast = !rotateBlock && h.toast && (h.toast !== "NITRO" || h.boosting);
