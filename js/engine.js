@@ -1,4 +1,4 @@
-import { CARS, DRIVERS, TRACKS, applyUpgrades } from "./data.js?v=polish3";
+import { CARS, DRIVERS, TRACKS, applyUpgrades } from "./data.js?v=polish4";
 
 const SEG = 200;
 const ROAD = 2100;
@@ -504,9 +504,11 @@ export class GameEngine {
     this.radioT = 0;
     this._fuelWarn = 0;
     this._nitroRadioLatch = false;
+    this._draftRadioLatch = false;
     this.dust = [];
     this.draft = 0;
     this._lastPlace = 8;
+    this._placeReady = false;
     this.bumpCool = 0;
     this.upgrades = { engine: 0, tires: 0, nitro: 0 };
     this.playerCarId = "fenix";
@@ -658,6 +660,7 @@ export class GameEngine {
     this.dust = [];
     this.draft = 0;
     this._lastPlace = 8;
+    this._placeReady = false;
     this.toast = "";
     this.toastT = 0;
     this.lapFlash = null;
@@ -666,6 +669,7 @@ export class GameEngine {
     this.radioT = 0;
     this._fuelWarn = 0;
     this._nitroRadioLatch = false;
+    this._draftRadioLatch = false;
     this._aiDoneAt = 0;
     this.results = null;
     this.mode = "race";
@@ -779,7 +783,10 @@ export class GameEngine {
     this.rank();
     {
       const place = this.livePlace(this.player);
-      if (this._lastPlace && place < this._lastPlace && this.countdown <= 0) {
+      if (!this._placeReady) {
+        this._lastPlace = place;
+        this._placeReady = true;
+      } else if (place < this._lastPlace) {
         this.radioSay(place === 1 ? "Primeiro! Segura a ponta!" : `Passou! Agora ${place}º!`, 1.6);
       }
       this._lastPlace = place;
@@ -878,9 +885,16 @@ export class GameEngine {
     this.draft = lerp(this.draft || 0, draft, 1 - Math.exp(-6 * dt));
     if (this.draft > 0.12) {
       max *= 1 + this.draft * 0.14;
-      if (this.draft > 0.55 && this.toast !== "NITRO" && (this.radioT || 0) <= 0) {
-        this.radioSay("Vácuo! Colado nele!", 1.4);
+      if (this.draft > 0.55) {
+        if (!this._draftRadioLatch) {
+          this._draftRadioLatch = true;
+          this.radioSay("Vácuo! Colado nele!", 1.4);
+        }
+      } else if (this.draft < 0.35) {
+        this._draftRadioLatch = false;
       }
+    } else {
+      this._draftRadioLatch = false;
     }
     if ((p.bumpLock || 0) > 0 && p.speedAim != null) {
       max = Math.min(max, p.speedAim);
