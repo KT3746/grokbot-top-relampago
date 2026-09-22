@@ -1,7 +1,7 @@
-import { CARS, TRACKS, UPGRADES, PRIZE, POINTS, DRIVERS, QUALIFY } from "./data.js?v=polish6";
-import { AudioBus } from "./audio.js?v=polish6";
-import { GameEngine } from "./engine.js?v=polish6";
-import { getModo } from "./modo.js?v=polish6";
+import { CARS, TRACKS, UPGRADES, PRIZE, POINTS, DRIVERS, QUALIFY } from "./data.js?v=polish7";
+import { AudioBus } from "./audio.js?v=polish7";
+import { GameEngine } from "./engine.js?v=polish7";
+import { getModo } from "./modo.js?v=polish7";
 
 const SAVE_KEY = "relampago-save";
 
