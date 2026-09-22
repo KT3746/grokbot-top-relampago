@@ -1,4 +1,4 @@
-import { CARS, DRIVERS, TRACKS, applyUpgrades } from "./data.js?v=polish6";
+import { CARS, DRIVERS, TRACKS, applyUpgrades } from "./data.js?v=polish7";
 
 const SEG = 200;
 const ROAD = 2100;
