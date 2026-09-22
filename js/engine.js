@@ -1,4 +1,4 @@
-import { CARS, DRIVERS, TRACKS, applyUpgrades } from "./data.js?v=polish4";
+import { CARS, DRIVERS, TRACKS, applyUpgrades } from "./data.js?v=polish5";
 
 const SEG = 200;
 const ROAD = 2100;
@@ -738,6 +738,7 @@ export class GameEngine {
     p.nitroBurst = NITRO_BURST * (p.spec.nitroTank || 1);
     this.fovKick = 1;
     this.audio?.nitro?.();
+    this.radioSay("Nitro! Vai fundo!", 1.8);
     p._nitroLatch = true;
     this.keys = { ...this.keys, nitro: true };
   }
