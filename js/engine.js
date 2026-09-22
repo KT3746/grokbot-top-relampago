@@ -1,4 +1,4 @@
-import { CARS, DRIVERS, TRACKS, applyUpgrades } from "./data.js?v=polish5";
+import { CARS, DRIVERS, TRACKS, applyUpgrades } from "./data.js?v=polish6";
 
 const SEG = 200;
 const ROAD = 2100;
@@ -7,7 +7,7 @@ const FOV = 100;
 const CAM_H = 900;
 const CAM_DEPTH = 1 / Math.tan(((FOV / 2) * Math.PI) / 180);
 const PLAYER_Z = CAM_H * CAM_DEPTH;
-const CENTRIFUGAL = 0.13;
+const CENTRIFUGAL = 0.145;
 const SPRITE_SCALE = 0.38;
 const CAR_SCALE_AT_PLAYER = 3.7;
 const CAR_HALF_W = 0.15;
@@ -736,7 +736,8 @@ export class GameEngine {
     if (p._nitroLatch || p.nitroBurst > 0 || p.nitroCharges <= 0 || p.fuel <= 0 || off) return;
     p.nitroCharges -= 1;
     p.nitroBurst = NITRO_BURST * (p.spec.nitroTank || 1);
-    this.fovKick = 1;
+    this.fovKick = 1.18;
+    p.speed = Math.min(this.maxSpeed(p) * 1.12, p.speed + 110);
     this.audio?.nitro?.();
     this.radioSay("Nitro! Vai fundo!", 1.8);
     p._nitroLatch = true;
@@ -873,7 +874,8 @@ export class GameEngine {
     if (canFire) {
       p.nitroCharges -= 1;
       p.nitroBurst = NITRO_BURST * (p.spec.nitroTank || 1);
-      this.fovKick = 1;
+      this.fovKick = 1.18;
+      p.speed = Math.min(this.maxSpeed(p) * 1.12, p.speed + 110);
       this.audio?.nitro?.();
       this.radioSay("Nitro! Vai fundo!", 1.8);
     }
@@ -908,10 +910,10 @@ export class GameEngine {
     const look = this.findSeg(p.z + 12 * SEG);
     const grip = p.spec.grip * (off ? 0.32 : 1);
     const bend = clamp(Math.abs(look.curve || 0) / 5.0, 0, 1);
-    if (!boost) max *= 1 - bend * (0.055 / Math.max(0.72, grip));
+    if (!boost) max *= 1 - bend * (0.068 / Math.max(0.72, grip));
 
-    const accel = 1800 * p.spec.accel * (boost ? 2.35 : 1) * (off ? 0.55 : 1);
-    if (boost) p.speed = Math.min(max, p.speed + 420 * dt);
+    const accel = 1800 * p.spec.accel * (boost ? 2.48 : 1) * (off ? 0.55 : 1);
+    if (boost) p.speed = Math.min(max, p.speed + 560 * dt);
     if (up) p.speed += accel * dt;
     else p.speed -= (off ? 780 : 520) * dt;
     if (down) p.speed -= 3800 * dt;
@@ -926,14 +928,14 @@ export class GameEngine {
     const speedPct = p.speed / Math.max(1, this.maxSpeed(p));
     this.spawnDust(dt, off, speedPct);
     this.updateDust(dt);
-    if (off && speedPct > 0.25) this.hitShake = Math.max(this.hitShake || 0, 0.25 * speedPct);
+    if (off && speedPct > 0.25) this.hitShake = Math.max(this.hitShake || 0, 0.38 * speedPct);
     const want = (right ? 1 : 0) - (left ? 1 : 0);
     // Easy lane changes — strong lateral move even at mid speed.
     this.steer = lerp(this.steer, want, (off ? 3.4 : 6.0) * dt);
     const turn = (0.78 + grip * 0.48) * (0.72 + 0.70 * speedPct);
     this.playerX += this.steer * turn * dt;
     // Curve drift fights less while you hold a direction.
-    const curvePull = want ? 0.012 : (off ? 0.034 : 0.026);
+    const curvePull = want ? 0.014 : (off ? 0.036 : 0.030);
     this.playerX += (-look.curve * curvePull * speedPct) * dt;
     if (!want && (this.sideShock || 0) <= 0) {
       this.playerX = lerp(this.playerX, clamp(-look.curve * 0.028, -0.16, 0.16), (off ? 1.6 : 0.7) * dt);
@@ -966,7 +968,7 @@ export class GameEngine {
     if (p.nitroBurst > 0) p.nitroBurst = Math.max(0, p.nitroBurst - dt);
     if (boost) {
       p.fuel = Math.max(0, p.fuel - dt * 0.05);
-      this.fovKick = lerp(this.fovKick, 1, 8 * dt);
+      this.fovKick = lerp(this.fovKick, 1.05, 10 * dt);
       if (p.nitroBurst > 0) {
         this.toast = "NITRO";
         this.toastT = 0.2;
@@ -975,7 +977,8 @@ export class GameEngine {
         this.toastT = 0;
       }
     } else {
-      this.fovKick = lerp(this.fovKick, 0, 4 * dt);
+      const speedKick = clamp((speedPct - 0.82) / 0.18, 0, 1) * 0.26;
+      this.fovKick = lerp(this.fovKick, speedKick, 3.4 * dt);
       if (this.toast === "NITRO") {
         this.toast = "";
         this.toastT = 0;
@@ -1171,7 +1174,7 @@ export class GameEngine {
     this.camX = lerp(this.camX, wantX, follow);
     const seg = this.findSeg(this.position);
     const t = this.percent(this.position);
-    const nitroLift = (this.fovKick || 0) * 55;
+    const nitroLift = (this.fovKick || 0) * 72;
     const wantY = CAM_H + lerp(seg.p1.y, seg.p2.y, t) - nitroLift;
     this.camY = lerp(this.camY, wantY, follow);
     this.camZ = this.position;
@@ -1421,6 +1424,18 @@ export class GameEngine {
       // Lateral separation only — never push rivals along the track.
       this.shiftAI(c, -away * 0.06, 0);
       this.unstickFromPlayer(c);
+      if ((this.bumpCool || 0) <= 0) {
+        this.bumpCool = 0.38;
+        this.hitShake = Math.max(this.hitShake || 0, 0.62);
+        this.hitFlash = Math.max(this.hitFlash || 0, 0.78);
+        this.sideShock = Math.max(this.sideShock || 0, 0.22);
+        this.audio?.bump?.();
+        if (this.toast !== "NITRO") {
+          this.toast = "BATIDA";
+          this.toastT = 0.5;
+        }
+        this.hitPlayer(0.93);
+      }
     }
     for (let i = 0; i < this.cars.length; i++) {
       for (let j = i + 1; j < this.cars.length; j++) {
@@ -1506,9 +1521,21 @@ export class GameEngine {
           };
           this.lapFlashT = done ? 1.8 : 1.5;
           this.lapTime = 0;
-          this.toast = "";
-          this.toastT = 0;
-          this.radioSay(done ? "Chegada! Que bela corrida!" : "Volta completa! Mantém o ritmo!", 2.0);
+          if (done) {
+            const place = this.livePlace(this.player);
+            this.toast = place === 1 ? "VITÓRIA!" : "CHEGADA!";
+            this.toastT = 1.4;
+            const cheers = {
+              1: "Bandeirada! Campeão da pista!",
+              2: "Chegada! Quase o ouro — brilhante!",
+              3: "Chegada! Pódio! Que corrida!",
+            };
+            this.radioSay(cheers[place] || `Chegada em ${place}º! Que bela corrida!`, 2.6);
+          } else {
+            this.toast = "";
+            this.toastT = 0;
+            this.radioSay("Volta completa! Mantém o ritmo!", 2.0);
+          }
         }
         if (c.laps >= this.totalLaps) {
           c.finished = true;
@@ -1757,7 +1784,7 @@ export class GameEngine {
 
     if ((this.hitShake || 0) > 0) {
       const s = this.hitShake;
-      ctx.translate((Math.random() - 0.5) * 14 * s, (Math.random() - 0.5) * 8 * s);
+      ctx.translate((Math.random() - 0.5) * 18 * s, (Math.random() - 0.5) * 11 * s);
     }
 
     this.drawHills(w, h, def);
@@ -1765,7 +1792,7 @@ export class GameEngine {
 
     if ((this.hitFlash || 0) > 0.04) {
       const f = clamp(this.hitFlash, 0, 1);
-      ctx.fillStyle = `rgba(255, 255, 255, ${0.12 * f})`;
+      ctx.fillStyle = `rgba(255, 220, 210, ${0.20 * f})`;
       ctx.fillRect(0, 0, w, h);
     }
 
