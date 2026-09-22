@@ -20,11 +20,19 @@ export class AudioBus {
     this.master = this.ctx.createGain();
     this.musicGain = this.ctx.createGain();
     this.sfxGain = this.ctx.createGain();
-    this.musicGain.gain.value = 0.13;
-    this.sfxGain.gain.value = 0.22;
+    // Louder bus, compressor tames peaks that crackle on mobile speakers.
+    this.musicGain.gain.value = 0.22;
+    this.sfxGain.gain.value = 0.34;
+    this.comp = this.ctx.createDynamicsCompressor();
+    this.comp.threshold.value = -18;
+    this.comp.knee.value = 18;
+    this.comp.ratio.value = 6;
+    this.comp.attack.value = 0.004;
+    this.comp.release.value = 0.18;
     this.musicGain.connect(this.master);
     this.sfxGain.connect(this.master);
-    this.master.connect(this.ctx.destination);
+    this.master.connect(this.comp);
+    this.comp.connect(this.ctx.destination);
     this.applyMute();
     this.startMusic(this.theme || "menu");
   }
@@ -47,8 +55,10 @@ export class AudioBus {
     const g = this.ctx.createGain();
     o.type = type;
     o.frequency.value = freq;
-    g.gain.setValueAtTime(vol, this.ctx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + dur);
+    const t0 = this.ctx.currentTime;
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.001, vol), t0 + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
     o.connect(g);
     g.connect(this.sfxGain);
     o.start();
@@ -79,12 +89,12 @@ export class AudioBus {
   pickup() { this.beep(540, 0.05, "sine", 0.025); }
   go() { this.beep(196, 0.22, "sine", 0.08); this.beep(262, 0.2, "triangle", 0.06); }
   count() { this.beep(196, 0.1, "sine", 0.07); }
-  bump() { this.noise(0.14, 0.1, 420); }
+  bump() { this.noise(0.12, 0.055, 380); }
   nitro() {
-    this.beep(160, 0.12, "sawtooth", 0.07);
-    this.beep(280, 0.18, "square", 0.05);
-    this.beep(520, 0.1, "sine", 0.04);
-    this.noise(0.22, 0.09, 900);
+    this.beep(160, 0.14, "triangle", 0.09);
+    this.beep(280, 0.16, "sine", 0.07);
+    this.beep(520, 0.1, "sine", 0.05);
+    this.noise(0.18, 0.045, 700);
   }
   finish() {
     [262, 330, 392, 523].forEach((f, i) => {
@@ -119,7 +129,7 @@ export class AudioBus {
     const racing = this.theme === "race";
     const freq = 42 + speed01 * 88 + (nitro ? 18 : 0);
     const cutoff = 220 + speed01 * 260 + (nitro ? 90 : 0);
-    const gain = racing ? (0.012 + speed01 * 0.038 + (nitro ? 0.012 : 0)) : 0.0001;
+    const gain = racing ? (0.018 + speed01 * 0.048 + (nitro ? 0.014 : 0)) : 0.0001;
     this.engine.o1.frequency.setTargetAtTime(freq, now, 0.08);
     this.engine.o2.frequency.setTargetAtTime(freq * 2.02, now, 0.08);
     this.engine.f.frequency.setTargetAtTime(cutoff, now, 0.1);
@@ -208,18 +218,23 @@ export class AudioBus {
     const p = this._sched;
     const stepDur = 60 / p.bpm / 4;
     const now = this.ctx.currentTime;
-    // Catch up if tab lagged
-    if (this._nextAt < now - 0.25) this._nextAt = now + 0.02;
+    // If the tab lagged, jump the clock — never dump a burst of notes (crackles).
+    if (this._nextAt < now - 0.12) {
+      const missed = Math.floor((now + 0.05 - this._nextAt) / stepDur);
+      this.step += Math.max(0, missed);
+      this._nextAt = now + 0.03;
+    }
     while (this._nextAt <= now + 0.08) {
       const i = this.step % p.steps;
       const t = this._nextAt;
       if (!this.muted) {
         const race = this.theme === "race";
-        if (p.bass[i]) this.tone(p.bass[i], stepDur * 0.88, "triangle", race ? 0.055 : 0.042, t);
-        if (p.lead[i]) this.tone(p.lead[i], stepDur * 0.62, race ? "square" : "triangle", race ? 0.026 : 0.022, t);
-        if (p.lead2[i]) this.tone(p.lead2[i], stepDur * 0.78, "sine", race ? 0.018 : 0.016, t);
-        if (p.kick[i]) this.kick(t, race ? 0.045 : 0.032);
-        if (p.hat[i]) this.hat(t, race ? 0.016 : 0.012);
+        // Softer square / hats — less speaker hiss on phones.
+        if (p.bass[i]) this.tone(p.bass[i], stepDur * 0.88, "triangle", race ? 0.07 : 0.055, t);
+        if (p.lead[i]) this.tone(p.lead[i], stepDur * 0.62, race ? "triangle" : "triangle", race ? 0.04 : 0.032, t);
+        if (p.lead2[i]) this.tone(p.lead2[i], stepDur * 0.78, "sine", race ? 0.028 : 0.022, t);
+        if (p.kick[i]) this.kick(t, race ? 0.06 : 0.042);
+        if (p.hat[i]) this.hat(t, race ? 0.012 : 0.009);
       }
       this.step++;
       this._nextAt += stepDur;
@@ -242,22 +257,24 @@ export class AudioBus {
 
   hat(time, vol) {
     const n = this.ctx.createBufferSource();
-    const dur = 0.04;
+    const dur = 0.035;
     const buf = this.ctx.createBuffer(1, Math.max(1, this.ctx.sampleRate * dur), this.ctx.sampleRate);
     const data = buf.getChannelData(0);
-    for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * 0.7;
     n.buffer = buf;
     const f = this.ctx.createBiquadFilter();
-    f.type = "highpass";
-    f.frequency.value = 6000;
+    f.type = "bandpass";
+    f.frequency.value = 4500;
+    f.Q.value = 0.8;
     const g = this.ctx.createGain();
-    g.gain.setValueAtTime(vol, time);
+    g.gain.setValueAtTime(0.0001, time);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.001, vol), time + 0.004);
     g.gain.exponentialRampToValueAtTime(0.001, time + dur);
     n.connect(f);
     f.connect(g);
     g.connect(this.musicGain);
     n.start(time);
-    n.stop(time + dur);
+    n.stop(time + dur + 0.01);
   }
 
   tone(freq, dur, type, vol, time) {
@@ -268,13 +285,16 @@ export class AudioBus {
     o.type = type;
     o.frequency.value = freq;
     f.type = "lowpass";
-    f.frequency.value = type === "square" ? 1400 : 1600;
-    g.gain.setValueAtTime(vol, time);
-    g.gain.exponentialRampToValueAtTime(0.001, time + Math.max(0.03, dur));
+    f.frequency.value = type === "square" ? 1100 : 1500;
+    f.Q.value = 0.6;
+    // Soft attack avoids click/crackle on phone speakers.
+    g.gain.setValueAtTime(0.0001, time);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.001, vol), time + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.001, time + Math.max(0.04, dur));
     o.connect(f);
     f.connect(g);
     g.connect(this.musicGain);
     o.start(time);
-    o.stop(time + dur + 0.02);
+    o.stop(time + dur + 0.03);
   }
 }
