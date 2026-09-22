@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800&family=Teko:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/style.css?v=polish5" />
+  <link rel="stylesheet" href="../css/style.css?v=polish6" />
 </head>
 <body data-modo="pc" class="modo-pc">
   <div id="app">
@@ -95,7 +95,7 @@
           <button type="button" data-action="play" class="primary">Jogar</button>
           <button type="button" data-action="howto">Como jogar</button>
         </div>
-        <p class="hint">Setas ou W A S D. Nitro no Shift ou no Espaço. Pausa em Esc.</p>
+        <p class="hint">WASD ou setas para dirigir · Shift (ou Espaço) nitro · Esc pausa.</p>
         <p class="hint"><a href="../index.html">Quero a versão de celular</a></p>
       </div>
     </section>
@@ -109,6 +109,7 @@
           <li><kbd>←</kbd> <kbd>→</kbd> ou <kbd>A</kbd> <kbd>D</kbd> — dirigir</li>
           <li><kbd>Shift</kbd> ou <kbd>Espaço</kbd> — nitro</li>
           <li><kbd>Esc</kbd> — pausar · <kbd>M</kbd> — som · <kbd>F</kbd> — tela cheia</li>
+          <li>Cole atrás de um rival para ganhar vácuo (draft) e um pouco mais de velocidade.</li>
           <li>Galão amarelo no meio da pista: passe por cima para encher o tanque. Sem combustível o motor morre.</li>
           <li>No campeonato, precisa chegar em 4º ou melhor para avançar.</li>
           <li>O nitro tem 3 cargas por corrida. Cada toque no Shift ou Espaço gasta uma. Solte e aperte de novo para a próxima.</li>
@@ -172,11 +173,12 @@
       <div class="screen-inner card-panel">
         <h2>Pausa</h2>
         <ul class="howto compact">
-          <li>Setas ou W A S D para dirigir</li>
-          <li>Shift ou Espaço para nitro · Esc para voltar</li>
+          <li>WASD ou setas para dirigir</li>
+          <li>Shift nitro · Esc continua</li>
         </ul>
         <div class="menu stacked">
           <button type="button" data-action="resume" class="primary">Continuar</button>
+          <button type="button" data-action="mute">Som</button>
           <button type="button" data-action="restart">Recomeçar</button>
           <button type="button" data-action="quit-race">Sair da corrida</button>
         </div>
@@ -210,6 +212,6 @@
       <button type="button" id="btn-full" title="Tela cheia">Tela cheia</button>
     </div>
   </div>
-  <script type="module" src="../js/app.js?v=polish5"></script>
+  <script type="module" src="../js/app.js?v=polish6"></script>
 </body>
 </html>
