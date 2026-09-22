@@ -1,7 +1,7 @@
-import { CARS, TRACKS, UPGRADES, PRIZE, POINTS, DRIVERS, QUALIFY } from "./data.js?v=polish5";
-import { AudioBus } from "./audio.js?v=polish5";
-import { GameEngine } from "./engine.js?v=polish5";
-import { getModo } from "./modo.js?v=polish5";
+import { CARS, TRACKS, UPGRADES, PRIZE, POINTS, DRIVERS, QUALIFY } from "./data.js?v=polish6";
+import { AudioBus } from "./audio.js?v=polish6";
+import { GameEngine } from "./engine.js?v=polish6";
+import { getModo } from "./modo.js?v=polish6";
 
 const SAVE_KEY = "relampago-save";
 
@@ -331,8 +331,12 @@ class App {
   }
 
   syncMute() {
+    const label = this.audio.muted ? "Som off" : "Som";
+    document.querySelectorAll('[data-action="mute"]').forEach((btn) => {
+      btn.textContent = label;
+    });
     const muteBtn = $("btn-mute");
-    if (muteBtn) muteBtn.textContent = this.audio.muted ? "Som off" : "Som";
+    if (muteBtn) muteBtn.textContent = label;
   }
 
   isIPhone() {
@@ -576,10 +580,16 @@ class App {
       if (this.afterShop === "standings") this.renderStandings();
     }
     if (name === "track-go") this.startQuick();
+    if (name === "mute") {
+      this.audio.toggleMute();
+      this.syncMute();
+      return;
+    }
     if (name === "pause") {
       if (this.engine.finished) return;
       this.engine.mode = "idle";
       this.show("pause");
+      this.syncMute();
     }
     if (name === "resume") {
       this.engine.mode = "race";
@@ -900,6 +910,7 @@ class App {
   }
 
   loop(now) {
+    // Aba oculta: não atualiza engine pesado nem render (dt efetivo = 0).
     if (document.hidden) {
       this._now = now;
       requestAnimationFrame((t) => this.loop(t));
