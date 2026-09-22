@@ -566,7 +566,7 @@ body.racing .top-tools {
   text-shadow: 0 2px 6px #000, 0 6px 20px rgba(0,0,0,0.55);
   overflow: visible;
 }
-.speedo strong.boost { color: #7cf6ff; text-shadow: 0 0 18px #49d6ff, 0 2px 6px #000; }
+.speedo strong.boost { color: #9cfff8; text-shadow: 0 0 22px #49d6ff, 0 0 40px rgba(73,214,255,0.45), 0 2px 6px #000; }
 .speedo em {
   color: #d5dbe6;
   font-style: normal;
@@ -644,12 +644,14 @@ body.racing .top-tools {
 .countdown.n2 .lights i:nth-child(1),
 .countdown.n2 .lights i:nth-child(2),
 .countdown.n1 .lights i {
-  background: radial-gradient(circle at 35% 30%, #ff7a6a, #d41919 70%);
-  box-shadow: 0 0 18px rgba(255, 60, 40, 0.85), inset 0 1px 2px rgba(255,255,255,0.35);
+  background: radial-gradient(circle at 35% 30%, #ff8a7a, #d41919 70%);
+  box-shadow: 0 0 22px rgba(255, 60, 40, 0.95), 0 0 8px rgba(255,120,80,0.5), inset 0 1px 2px rgba(255,255,255,0.35);
+  transform: scale(1.06);
 }
 .countdown.go .lights i {
-  background: radial-gradient(circle at 35% 30%, #9dff8a, #1f9a2e 70%);
-  box-shadow: 0 0 20px rgba(60, 255, 90, 0.9), inset 0 1px 2px rgba(255,255,255,0.35);
+  background: radial-gradient(circle at 35% 30%, #b4ff9a, #1f9a2e 70%);
+  box-shadow: 0 0 24px rgba(60, 255, 90, 1), 0 0 10px rgba(120,255,100,0.55), inset 0 1px 2px rgba(255,255,255,0.35);
+  transform: scale(1.08);
 }
 #countdown-num {
   font-family: "Teko", Impact, sans-serif;
@@ -1129,8 +1131,8 @@ button.hud-pause,
 
 
 .speedo strong.draft {
-  color: #7cf6ff;
-  text-shadow: 0 0 16px rgba(80, 220, 255, 0.7), 0 2px 6px #000;
+  color: #8af0ff;
+  text-shadow: 0 0 20px rgba(80, 220, 255, 0.85), 0 0 36px rgba(40,180,255,0.35), 0 2px 6px #000;
 }
 #hud-best { font-size: 28px; }
 body.modo-celular.racing #hud-best { font-size: 20px; }
@@ -1140,3 +1142,27 @@ body.modo-celular.racing .hud-card:has(#hud-best) {
   padding: 4px 8px;
 }
 body.modo-celular.racing #hud-best { font-size: 18px; }
+
+
+@media (prefers-reduced-motion: reduce) {
+  .toast,
+  .countdown.go #countdown-num,
+  #radio,
+  .lap-banner,
+  .radio {
+    animation: none !important;
+    transition: none !important;
+  }
+  .countdown .lights i {
+    transition: none !important;
+    transform: none !important;
+  }
+  @keyframes go-pop {
+    from { transform: none; opacity: 1; }
+    to { transform: none; opacity: 1; }
+  }
+  @keyframes radio-in {
+    from { opacity: 1; transform: none; }
+    to { opacity: 1; transform: none; }
+  }
+}
