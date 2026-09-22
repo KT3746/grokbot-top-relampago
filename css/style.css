@@ -884,6 +884,13 @@ body.racing a { pointer-events: none !important; }
 body.modo-celular.racing .hud-top {
   top: max(8px, env(safe-area-inset-top));
   max-width: calc(100% - 147px);
+  flex-wrap: wrap;
+  row-gap: 6px;
+}
+body.modo-celular.racing .hud-card.wide { min-width: 96px; }
+@media (orientation: portrait) and (max-width: 480px) {
+  body.modo-celular.racing .hud-card.wide { min-width: 88px; }
+  body.modo-celular.racing #hud-time { font-size: 20px; }
 }
 body.modo-celular.racing .hud-bottom {
   top: max(76px, calc(env(safe-area-inset-top) + 68px));
