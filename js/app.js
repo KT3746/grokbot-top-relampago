@@ -1,7 +1,7 @@
-import { CARS, TRACKS, UPGRADES, PRIZE, POINTS, DRIVERS, QUALIFY } from "./data.js?v=polish4";
-import { AudioBus } from "./audio.js?v=polish4";
-import { GameEngine } from "./engine.js?v=polish4";
-import { getModo } from "./modo.js?v=polish4";
+import { CARS, TRACKS, UPGRADES, PRIZE, POINTS, DRIVERS, QUALIFY } from "./data.js?v=polish5";
+import { AudioBus } from "./audio.js?v=polish5";
+import { GameEngine } from "./engine.js?v=polish5";
+import { getModo } from "./modo.js?v=polish5";
 
 const SAVE_KEY = "relampago-save";
 
@@ -480,6 +480,10 @@ class App {
     $("radio")?.classList.add("hidden");
     pads?.classList.add("hidden");
     this.pad.up = this.pad.down = this.pad.left = this.pad.right = this.pad.nitro = false;
+    this.goLatch = false;
+    this._pointers?.clear();
+    document.querySelectorAll(".pad.held").forEach((el) => el.classList.remove("held"));
+    this.engine.setKeys(this.driveKeys());
     const el = $(`screen-${name}`);
     if (el) {
       el.classList.remove("hidden");
