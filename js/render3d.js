@@ -195,22 +195,7 @@ export class Renderer3D {
   }
 
   _makeSky() {
-    const geo = new THREE.SphereGeometry(260, 12, 8);
-    const cols = new Float32Array(geo.attributes.position.count * 3);
-    geo.setAttribute("color", new THREE.BufferAttribute(cols, 3));
-    const mat = new THREE.MeshBasicMaterial({
-      vertexColors: true,
-      side: THREE.BackSide,
-      depthWrite: false,
-      fog: false,
-    });
-    this.sky = new THREE.Mesh(geo, mat);
-    this.sky.frustumCulled = false;
-    this.scene.add(this.sky);
-    this._skyCols = cols;
-    this._skyPos = geo.attributes.position;
-
-    const sunGeo = new THREE.SphereGeometry(4.2, 10, 8);
+    const sunGeo = new THREE.SphereGeometry(4.2, 12, 10);
     this.sunMesh = new THREE.Mesh(sunGeo, new THREE.MeshBasicMaterial({ color: 0xfff3c4, fog: false }));
     this.scene.add(this.sunMesh);
     const glow = new THREE.Mesh(
@@ -221,18 +206,8 @@ export class Renderer3D {
   }
 
   _paintSky(c0, c1) {
-    const a = hexColor(c0);
-    const b = hexColor(c1);
-    const pos = this._skyPos;
-    const cols = this._skyCols;
-    for (let i = 0; i < pos.count; i++) {
-      const y = pos.getY(i) / 260;
-      const t = clamp((y + 0.12) / 1.05, 0, 1);
-      cols[i * 3] = lerp(b.r, a.r, t);
-      cols[i * 3 + 1] = lerp(b.g, a.g, t);
-      cols[i * 3 + 2] = lerp(b.b, a.b, t);
-    }
-    this.sky.geometry.attributes.color.needsUpdate = true;
+    this.scene.background = hexColor(c0);
+    this.renderer.setClearColor(c0, 1);
   }
 
   _makeRibbons() {
@@ -242,8 +217,9 @@ export class Renderer3D {
     this.roadMat = new THREE.MeshLambertMaterial({
       vertexColors: true,
       map: this._makeRoadTexture("#5a5a5e", "#f2f2f2", "#d3542f", "#efefef"),
+      side: THREE.DoubleSide,
     });
-    this.grassMat = new THREE.MeshLambertMaterial({ vertexColors: true });
+    this.grassMat = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
     this.roadMesh = new THREE.Mesh(road.geo, this.roadMat);
     this.grassMesh = new THREE.Mesh(grass.geo, this.grassMat);
     this.roadMesh.frustumCulled = false;
@@ -267,12 +243,13 @@ export class Renderer3D {
     let k = 0;
     for (let i = 0; i < sta - 1; i++) {
       const a = i * 2;
+      // CCW visto de cima (+Y): left → nextLeft → right
       idx[k++] = a;
-      idx[k++] = a + 1;
       idx[k++] = a + 2;
       idx[k++] = a + 1;
+      idx[k++] = a + 1;
+      idx[k++] = a + 2;
       idx[k++] = a + 3;
-      idx[k++] = a + 2;
     }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute("position", new THREE.BufferAttribute(pos, 3).setUsage(THREE.DynamicDrawUsage));
@@ -325,9 +302,8 @@ export class Renderer3D {
     if (!def) return;
     this._paintSky(def.sky[0], def.sky[1]);
     this._fog.set(def.fogColor);
-    this.scene.background = hexColor(def.sky[0]);
     this.scene.fog.color.copy(this._fog);
-    const dens = (this.lowFx ? 0.013 : 0.0082) * (0.65 + def.fog * 0.7);
+    const dens = (this.lowFx ? 0.011 : 0.0065) * (0.55 + def.fog * 0.5);
     this.scene.fog.density = dens;
     this.ambient.color.set(def.ambient);
     this.ambient.intensity = def.night ? 0.28 : 0.55;
@@ -368,7 +344,7 @@ export class Renderer3D {
   }
 
   _paintHills(def) {
-    const c = hexColor(def.grass[1]).lerp(hexColor(def.sky[0]), 0.28);
+    const c = hexColor(def.grass[0]).lerp(hexColor(def.fogColor), 0.18);
     for (const m of this._hillMeshes) {
       m.material.color.copy(c);
       m.visible = !this.lowFx || this._hillMeshes.indexOf(m) % 2 === 0;
@@ -399,9 +375,8 @@ export class Renderer3D {
       const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.24, 3.4, 5), lambert(0x6b4423));
       trunk.position.y = 1.7;
       g.add(trunk);
-      const crown = new THREE.Mesh(new THREE.SphereGeometry(1.15, 6, 4), lambert(0x2f8a3a));
-      crown.scale.set(1.6, 0.42, 1.6);
-      crown.position.y = 3.45;
+      const crown = new THREE.Mesh(new THREE.ConeGeometry(1.35, 1.1, 6), lambert(0x2f8a3a));
+      crown.position.y = 3.55;
       g.add(crown);
     } else if (kind === "pine") {
       const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 1.3, 5), lambert(0x4a3422));
@@ -724,7 +699,7 @@ export class Renderer3D {
       const rx = Math.cos(yaw);
       const rz = -Math.sin(yaw);
       const vi = i * 2;
-      const yRoad = s.y + 0.045;
+      const yRoad = s.y + 0.08;
       rp[vi * 3] = s.x - rx * roadHalf;
       rp[vi * 3 + 1] = yRoad;
       rp[vi * 3 + 2] = s.z - rz * roadHalf;
@@ -936,23 +911,23 @@ export class Renderer3D {
       ox = (Math.random() - 0.5) * shake * 0.35;
       oy = (Math.random() - 0.5) * shake * 0.22;
     }
-    const eyeY = playerSt.y + EYE_H - kick * 0.55;
-    const back = CAM_BACK - kick * 0.8;
+    const portrait = (this.camera.aspect || 1) < 0.86;
+    const eyeY = playerSt.y + (portrait ? 3.35 : EYE_H) - kick * 0.55;
+    const back = (portrait ? CAM_BACK + 1.4 : CAM_BACK) - kick * 0.8;
     const yaw = playerSt.yaw || 0;
     const bx = Math.sin(yaw) * back;
     const bz = Math.cos(yaw) * back;
     this.camera.position.set(playerSt.x - bx + ox, eyeY + oy, playerSt.z - bz);
     this._look.set(
       playerSt.x + Math.sin(yaw) * LOOK_AHEAD,
-      playerSt.y + 0.9,
+      playerSt.y + (portrait ? 0.15 : 0.7),
       playerSt.z + Math.cos(yaw) * LOOK_AHEAD,
     );
     this.camera.lookAt(this._look);
-    const baseFov = this._phone ? 78 : 74;
+    const baseFov = this._phone ? (portrait ? 70 : 78) : 74;
     this.camera.fov = baseFov + kick * 9;
     this.camera.updateProjectionMatrix();
 
-    this.sky.position.copy(this.camera.position);
     const def = engine.track.def;
     const sun = def.sun;
     this.sunMesh.position.set(

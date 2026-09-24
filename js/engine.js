@@ -1,4 +1,4 @@
-import { CARS, DRIVERS, TRACKS, applyUpgrades } from "./data.js?v=202609241638";
+import { CARS, DRIVERS, TRACKS, applyUpgrades } from "./data.js?v=202609241701";
 
 const SEG = 200;
 const ROAD = 2100;
