@@ -1,7 +1,7 @@
-import { CARS, TRACKS, UPGRADES, PRIZE, POINTS, DRIVERS, QUALIFY } from "./data.js?v=polish7";
-import { AudioBus } from "./audio.js?v=polish7";
-import { GameEngine } from "./engine.js?v=polish7";
-import { getModo } from "./modo.js?v=polish7";
+import { CARS, TRACKS, UPGRADES, PRIZE, POINTS, DRIVERS, QUALIFY } from "./data.js?v=202609241711";
+import { AudioBus } from "./audio.js?v=202609241711";
+import { GameEngine } from "./engine.js?v=202609241711";
+import { getModo } from "./modo.js?v=202609241711";
 
 const SAVE_KEY = "relampago-save";
 
@@ -75,11 +75,19 @@ function fmt(t) {
 
 function $(id) { return document.getElementById(id); }
 
+function freshView(old) {
+  const n = document.createElement("canvas");
+  n.id = old?.id || "view";
+  n.tabIndex = 0;
+  old?.parentNode?.replaceChild(n, old);
+  return n;
+}
+
 class App {
-  constructor() {
+  constructor(renderer3d, canvas) {
     this.save = loadSave();
     this.audio = new AudioBus();
-    this.engine = new GameEngine($("view"), this.audio);
+    this.engine = new GameEngine(canvas || $("view"), this.audio, { renderer3d });
     this.phone = getModo() === "celular";
     this.kb = { up: false, down: false, left: false, right: false, nitro: false };
     this.pad = { up: false, down: false, left: false, right: false, nitro: false };
@@ -1025,4 +1033,23 @@ addEventListener("pointerdown", () => {
   document.documentElement.scrollIntoView?.({ block: "start" });
 }, { once: true });
 
-new App();
+async function boot() {
+  let canvas = $("view");
+  let renderer3d = null;
+  const phone = getModo() === "celular";
+  try {
+    const { tryCreateRenderer3D, showWebglFallbackNote } = await import("./render3d.js?v=202609241711");
+    renderer3d = tryCreateRenderer3D(canvas, { phone });
+    if (!renderer3d) {
+      canvas = freshView(canvas);
+      showWebglFallbackNote();
+    }
+  } catch (err) {
+    console.warn("3D indisponível, usando pista clássica 2D.", err);
+    canvas = freshView($("view") || canvas);
+    $("webgl-note")?.classList.remove("hidden");
+  }
+  new App(renderer3d, canvas);
+}
+
+boot();
