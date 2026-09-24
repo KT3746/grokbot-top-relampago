@@ -268,6 +268,8 @@ export class Renderer3D {
     const g = c.getContext("2d");
     g.fillStyle = asphalt;
     g.fillRect(0, 0, 128, 256);
+    g.fillStyle = "rgba(255,255,255,0.08)";
+    g.fillRect(0, 0, 128, 256);
     for (let y = 0; y < 256; y++) {
       for (let x = 0; x < 128; x++) {
         if (((x * 17 + y * 13) % 23) === 0) {
@@ -375,8 +377,8 @@ export class Renderer3D {
       const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.24, 3.4, 5), lambert(0x6b4423));
       trunk.position.y = 1.7;
       g.add(trunk);
-      const crown = new THREE.Mesh(new THREE.ConeGeometry(1.35, 1.1, 6), lambert(0x2f8a3a));
-      crown.position.y = 3.55;
+      const crown = new THREE.Mesh(new THREE.ConeGeometry(1.55, 0.55, 7), lambert(0x2f8a3a));
+      crown.position.y = 3.5;
       g.add(crown);
     } else if (kind === "pine") {
       const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 1.3, 5), lambert(0x4a3422));
@@ -911,15 +913,16 @@ export class Renderer3D {
       ox = (Math.random() - 0.5) * shake * 0.35;
       oy = (Math.random() - 0.5) * shake * 0.22;
     }
+    const lat = (engine.camX || 0) * ROAD_W;
     const portrait = (this.camera.aspect || 1) < 0.86;
     const eyeY = playerSt.y + (portrait ? 3.35 : EYE_H) - kick * 0.55;
     const back = (portrait ? CAM_BACK + 1.4 : CAM_BACK) - kick * 0.8;
     const yaw = playerSt.yaw || 0;
     const bx = Math.sin(yaw) * back;
     const bz = Math.cos(yaw) * back;
-    this.camera.position.set(playerSt.x - bx + ox, eyeY + oy, playerSt.z - bz);
+    this.camera.position.set(playerSt.x + lat - bx + ox, eyeY + oy, playerSt.z - bz);
     this._look.set(
-      playerSt.x + Math.sin(yaw) * LOOK_AHEAD,
+      playerSt.x + lat + Math.sin(yaw) * LOOK_AHEAD,
       playerSt.y + (portrait ? 0.15 : 0.7),
       playerSt.z + Math.cos(yaw) * LOOK_AHEAD,
     );

@@ -1,7 +1,7 @@
-import { CARS, TRACKS, UPGRADES, PRIZE, POINTS, DRIVERS, QUALIFY } from "./data.js?v=202609241701";
-import { AudioBus } from "./audio.js?v=202609241701";
-import { GameEngine } from "./engine.js?v=202609241701";
-import { getModo } from "./modo.js?v=202609241701";
+import { CARS, TRACKS, UPGRADES, PRIZE, POINTS, DRIVERS, QUALIFY } from "./data.js?v=202609241711";
+import { AudioBus } from "./audio.js?v=202609241711";
+import { GameEngine } from "./engine.js?v=202609241711";
+import { getModo } from "./modo.js?v=202609241711";
 
 const SAVE_KEY = "relampago-save";
 
@@ -1038,7 +1038,7 @@ async function boot() {
   let renderer3d = null;
   const phone = getModo() === "celular";
   try {
-    const { tryCreateRenderer3D, showWebglFallbackNote } = await import("./render3d.js?v=202609241701");
+    const { tryCreateRenderer3D, showWebglFallbackNote } = await import("./render3d.js?v=202609241711");
     renderer3d = tryCreateRenderer3D(canvas, { phone });
     if (!renderer3d) {
       canvas = freshView(canvas);
