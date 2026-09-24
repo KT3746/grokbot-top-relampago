@@ -14,7 +14,14 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800&family=Teko:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/style.css?v=polish7" />
+  <link rel="stylesheet" href="../css/style.css?v=202609241638" />
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "../js/vendor/three.module.js?v=202609241638"
+    }
+  }
+  </script>
 </head>
 <body data-modo="celular" class="modo-celular">
   <div id="app">
@@ -98,6 +105,7 @@
           <button type="button" data-action="play" class="primary">Jogar</button>
           <button type="button" data-action="howto">Como jogar</button>
         </div>
+        <p id="webgl-note" class="hint webgl-note hidden" role="status">Este aparelho não ligou o gráfico 3D. O jogo segue no modo clássico (2D).</p>
         <p class="hint">Deite o celular de lado. Segure Acelera com o polegar — não é só um toque.</p>
         <p class="hint">Na corrida: botões grandes para virar, acelerar, nitro e pausa.</p>
         <p class="hint"><a href="../index.html">Quero a versão de computador</a></p>
@@ -232,6 +240,6 @@
       <button type="button" id="btn-full" title="Tela cheia">Tela cheia</button>
     </div>
   </div>
-  <script type="module" src="../js/app.js?v=polish7"></script>
+  <script type="module" src="../js/app.js?v=202609241638"></script>
 </body>
 </html>

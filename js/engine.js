@@ -1,4 +1,4 @@
-import { CARS, DRIVERS, TRACKS, applyUpgrades } from "./data.js?v=polish7";
+import { CARS, DRIVERS, TRACKS, applyUpgrades } from "./data.js?v=202609241638";
 
 const SEG = 200;
 const ROAD = 2100;
@@ -460,9 +460,10 @@ function carScreenScale(projScale, h) {
 }
 
 export class GameEngine {
-  constructor(canvas, audio) {
+  constructor(canvas, audio, opts = {}) {
     this.canvas = canvas;
-    this.ctx = canvas.getContext("2d");
+    this.renderer3d = opts.renderer3d || null;
+    this.ctx = this.renderer3d ? null : canvas.getContext("2d");
     this.audio = audio;
     this.keys = {};
     this.mode = "idle";
@@ -523,6 +524,10 @@ export class GameEngine {
   }
 
   resize() {
+    if (this.renderer3d?.ok) {
+      this.renderer3d.resize();
+      return;
+    }
     const box = this.canvas.parentElement || this.canvas;
     const vv = visualViewport;
     let iw = Math.max(1, box.clientWidth || 0, innerWidth);
@@ -1752,7 +1757,13 @@ export class GameEngine {
   }
 
   render() {
+    if (this.renderer3d?.ok) {
+      this._frame = (this._frame || 0) + 1;
+      this.renderer3d.draw(this);
+      return;
+    }
     const ctx = this.ctx;
+    if (!ctx) return;
     const w = this.canvas.width;
     const h = this.canvas.height;
     ctx.setTransform(1, 0, 0, 1, 0, 0);

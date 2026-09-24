@@ -62,6 +62,11 @@ html, body {
   outline: none;
 }
 
+.webgl-note {
+  color: #ffd36a;
+  font-weight: 800;
+}
+
 html.immersive,
 html.immersive body,
 html.immersive #app,

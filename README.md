@@ -28,3 +28,5 @@ São duas versões. Escolha a sua:
 4. Na corrida, use os botões: virar, acelerar, frear, nitro e pausa.
 
 Fique no asfalto. Sem combustível o carro perde força. Latas na pista enchem o tanque.
+
+O jogo tenta desenhar a pista em 3D (Three.js, arquivo local). Se o aparelho não tiver WebGL, cai sozinho no modo clássico 2D.
