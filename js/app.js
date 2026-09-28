@@ -1,7 +1,7 @@
-import { CARS, TRACKS, UPGRADES, PRIZE, POINTS, DRIVERS, QUALIFY } from "./data.js?v=202609241711";
-import { AudioBus } from "./audio.js?v=202609241711";
-import { GameEngine } from "./engine.js?v=202609241711";
-import { getModo } from "./modo.js?v=202609241711";
+import { CARS, TRACKS, UPGRADES, PRIZE, POINTS, DRIVERS, QUALIFY } from "./data.js?v=202609280150";
+import { AudioBus } from "./audio.js?v=202609280150";
+import { GameEngine } from "./engine.js?v=202609280150";
+import { getModo } from "./modo.js?v=202609280150";
 
 const SAVE_KEY = "relampago-save";
 
@@ -120,6 +120,14 @@ class App {
     });
     addEventListener("visibilitychange", () => {
       this._now = performance.now();
+      if (document.hidden) {
+        this.audio.setEngine(0, false);
+        // Aba/app oculta mid-corrida: abre pausa (cel e PC) para não continuar "cego".
+        if (this.screen === "race" && !this.engine.finished) {
+          this.clearInput();
+          this.act("pause");
+        }
+      }
     });
     this.guardNavigation();
     try {
@@ -918,9 +926,10 @@ class App {
   }
 
   loop(now) {
-    // Aba oculta: não atualiza engine pesado nem render (dt efetivo = 0).
+    // Aba oculta: silencia motor, não simula nem renderiza (dt efetivo = 0).
     if (document.hidden) {
       this._now = now;
+      this.audio.setEngine(0, false);
       requestAnimationFrame((t) => this.loop(t));
       return;
     }
@@ -946,8 +955,10 @@ class App {
     if (this.screen === "race") this.paintHud(rotateBlock);
     const p = this.engine.player;
     const max = p ? this.engine.maxSpeed(p) : 1;
-    const boosting = !rotateBlock && (p?.nitroBurst || 0) > 0;
-    this.audio.setEngine((p?.speed || 0) / max, boosting);
+    const boosting = !rotateBlock && this.screen === "race" && (p?.nitroBurst || 0) > 0;
+    // Pausa / tela oculta: corta o motor; menus mantêm o som do attract.
+    if (this.screen === "pause" || rotateBlock) this.audio.setEngine(0, false);
+    else this.audio.setEngine((p?.speed || 0) / max, boosting);
     requestAnimationFrame((t) => this.loop(t));
   }
 
@@ -1038,7 +1049,7 @@ async function boot() {
   let renderer3d = null;
   const phone = getModo() === "celular";
   try {
-    const { tryCreateRenderer3D, showWebglFallbackNote } = await import("./render3d.js?v=202609241711");
+    const { tryCreateRenderer3D, showWebglFallbackNote } = await import("./render3d.js?v=202609280150");
     renderer3d = tryCreateRenderer3D(canvas, { phone });
     if (!renderer3d) {
       canvas = freshView(canvas);
