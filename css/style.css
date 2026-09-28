@@ -60,6 +60,8 @@ html, body {
   height: 100%;
   display: block;
   outline: none;
+  pointer-events: none;
+  touch-action: none;
 }
 
 .webgl-note {
@@ -932,8 +934,11 @@ body.modo-celular.racing .top-tools {
   h1 { font-size: 72px; }
   h2 { font-size: 36px; }
   .hud-card strong { font-size: 22px; }
-  .pad { min-width: 68px; min-height: 68px; width: 68px; height: 68px; }
-  .pad.go, .pad.stop { min-width: 80px; width: 80px; height: 80px; }
+  /* Alvos de polegar: não encolher abaixo de ~44pt */
+  .pad { min-width: 72px; min-height: 72px; width: 72px; height: 72px; font-size: 17px; }
+  .pad.go, .pad.stop { min-width: 88px; width: 88px; height: 88px; }
+  .pad.nitro { min-width: 68px; width: 68px; height: 68px; font-size: 14px; }
+  .pad-cluster { bottom: max(10px, env(safe-area-inset-bottom)); gap: 10px; }
 }
 
 body.modo-pc .pads,
@@ -1116,8 +1121,8 @@ body.modo-pc #screen-title h1 {
 
   .menu { margin-top: 8px; gap: 8px; }
   .menu button {
-    padding: 8px 16px;
-    min-height: 40px;
+    padding: 10px 16px;
+    min-height: 44px;
     min-width: 140px;
     font-size: 14px;
     box-shadow: 0 4px 0 #8a5a08;
@@ -1127,11 +1132,34 @@ body.modo-pc #screen-title h1 {
 }
 
 
-/* Removed UI: keep hidden even if cached HTML still has the nodes */
-#btn-mute,
-button.hud-pause,
-#btn-pause {
+/* Mute chrome removido; Pausa só no celular durante a corrida */
+#btn-mute {
   display: none !important;
+}
+body.modo-pc #btn-pause,
+body.modo-pc button.hud-pause {
+  display: none !important;
+}
+/* Fora da corrida, esconde Pausa (fica só em top-tools na race) */
+body.modo-celular:not(.racing) #btn-pause {
+  display: none !important;
+}
+body.modo-celular.racing #btn-pause {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  position: static;
+  transform: none;
+  min-width: 56px;
+  min-height: 44px;
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  background: rgba(7, 11, 20, 0.72);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 12px;
+  z-index: 21;
 }
 
 
@@ -1171,3 +1199,54 @@ body.modo-celular.racing #hud-best { font-size: 18px; }
     to { opacity: 1; transform: none; }
   }
 }
+
+/* Mobile polish: HUD legível em ~390px de altura (paisagem) */
+@media (orientation: landscape) and (max-height: 430px) {
+  body.modo-celular.racing .hud-top {
+    max-width: calc(100% - 200px);
+    gap: 6px;
+  }
+  body.modo-celular.racing .hud-card {
+    padding: 3px 8px;
+    min-width: 64px;
+  }
+  body.modo-celular.racing .hud-card strong { font-size: 20px; }
+  body.modo-celular.racing .hud-label { font-size: 9px; }
+  body.modo-celular.racing .hud-bottom {
+    top: max(58px, calc(env(safe-area-inset-top) + 50px));
+    width: min(140px, 36vw);
+  }
+  body.modo-celular.racing .speedo strong { font-size: 30px; }
+  body.modo-celular.racing .minimap-wrap { width: 96px; }
+  body.modo-celular.racing #minimap { width: 96px; height: 84px; }
+  body.modo-celular.racing .top-tools {
+    right: calc(max(8px, env(safe-area-inset-right)) + 100px);
+    gap: 6px;
+  }
+  body.modo-celular.racing .top-tools button {
+    min-width: 48px;
+    min-height: 44px;
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+  body.modo-celular.racing .radio {
+    top: max(118px, calc(env(safe-area-inset-top) + 108px));
+    max-width: min(52vw, 260px);
+    padding: 5px 8px;
+  }
+  body.modo-celular.racing #radio-msg { font-size: 12px; }
+}
+
+/* Portrait estreito (~390px): evita overflow do HUD */
+@media (orientation: portrait) and (max-width: 430px) {
+  body.modo-celular.racing .hud-top {
+    max-width: calc(100% - 12px);
+    gap: 6px;
+  }
+  body.modo-celular.racing .hud-card.wide { min-width: 84px; }
+  body.modo-celular.racing .hud-mid { display: none; }
+  body.modo-celular.racing .top-tools {
+    right: max(8px, env(safe-area-inset-right));
+  }
+}
+

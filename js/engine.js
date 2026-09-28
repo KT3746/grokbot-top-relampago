@@ -1,4 +1,4 @@
-import { CARS, DRIVERS, TRACKS, applyUpgrades } from "./data.js?v=202609241711";
+import { CARS, DRIVERS, TRACKS, applyUpgrades } from "./data.js?v=202609280150";
 
 const SEG = 200;
 const ROAD = 2100;
@@ -536,7 +536,7 @@ export class GameEngine {
       iw = Math.max(iw, vv.width);
       ih = Math.max(ih, vv.height);
     }
-    const dprCap = this._ios || this._phone ? 1.5 : 2;
+    const dprCap = this._ios || this._phone ? 1.25 : 2;
     const dpr = Math.min(devicePixelRatio || 1, dprCap);
     const bw = Math.round(iw * dpr);
     const bh = Math.round(ih * dpr);
