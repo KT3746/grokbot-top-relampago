@@ -1,4 +1,4 @@
-import { CARS, DRIVERS, TRACKS, applyUpgrades } from "./data.js?v=202610012319";
+import { CARS, DRIVERS, TRACKS, applyUpgrades } from "./data.js?v=202610020205";
 
 const SEG = 200;
 const ROAD = 2100;
@@ -658,6 +658,7 @@ export class GameEngine {
     this.hitFlash = 0;
     this.juice = "";
     this.juiceT = 0;
+    this._nearCool = 0;
     this._finishCueLatch = false;
     this.finishCue = false;
     this.time = 0;
@@ -805,12 +806,50 @@ export class GameEngine {
         this._placeReady = true;
       } else if (place < this._lastPlace) {
         this.radioSay(place === 1 ? "Primeiro! Segura a ponta!" : `Passou! Agora ${place}º!`, 1.6);
+        this.pulseJuice("pass", 0.55);
+        if (this.toast !== "NITRO") {
+          this.toast = place === 1 ? "1º!" : `PASSOU → ${place}º`;
+          this.toastT = 0.7;
+        }
       }
       this._lastPlace = place;
     }
+    this.checkNearMiss(dt);
     this.checkLaps();
     this.updateFinishCue();
     if (this.bumpCool > 0) this.bumpCool -= dt;
+  }
+
+  checkNearMiss(dt) {
+    if (!this.player || !this.track || this.finished || this.countdown > 0) return;
+    if (this._nearCool == null) this._nearCool = 0;
+    if (this._nearCool > 0) {
+      this._nearCool -= dt;
+      return;
+    }
+    const p = this.player;
+    const len = this.track.length;
+    const pProg = this.progress(p);
+    if ((p.speed || 0) < 180) return;
+    for (const c of this.cars) {
+      if (c.human || c.finished) continue;
+      if (Math.abs(this.progress(c) - pProg) > len * 0.45) continue;
+      if (this.overlapping(p, c)) continue;
+      const adz = Math.abs(wrapDist(c.z, p.z, len));
+      const adx = Math.abs(c.x - this.playerX);
+      // Close longitudinally, tight lateral gap — almost rubbed paint
+      const closeZ = adz > CAR_HALF_L * 0.85 && adz < CAR_HALF_L * 2.6;
+      const closeX = adx > CAR_HALF_W * 2.05 && adx < CAR_HALF_W * 3.55;
+      if (!closeZ || !closeX) continue;
+      this._nearCool = 2.4;
+      this.pulseJuice("near", 0.42);
+      if (this.toast !== "NITRO" && this.toast !== "BATIDA") {
+        this.toast = "QUASE!";
+        this.toastT = 0.55;
+      }
+      this.radioSay("Por um fio! Que passagem!", 1.5);
+      return;
+    }
   }
 
   updateFinishCue() {

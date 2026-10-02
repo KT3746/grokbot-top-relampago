@@ -535,7 +535,49 @@ body.racing .top-tools {
   box-shadow: 0 0 12px #49d6ff;
 }
 
-.bar-track.fuel i { background: linear-gradient(90deg, #ff5d6c, #f0b429); }
+.bar-track.fuel {
+  height: 14px;
+  border: 1px solid rgba(255, 220, 120, 0.35);
+  background: rgba(0, 0, 0, 0.55);
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.55);
+}
+.bar-track.fuel i {
+  background: linear-gradient(90deg, #ff5d6c, #f0b429 55%, #ffe08a);
+  box-shadow: 0 0 10px rgba(240, 180, 41, 0.35);
+  transition: width 0.12s linear, background 0.2s ease;
+}
+.bar-track.fuel.fuel-ok i {
+  background: linear-gradient(90deg, #3dcf7a, #f0b429 70%, #ffe08a);
+}
+.bar-track.fuel.fuel-low i {
+  background: linear-gradient(90deg, #ff8a3d, #ff5d6c);
+  box-shadow: 0 0 10px rgba(255, 100, 60, 0.4);
+}
+.bar-track.fuel.fuel-critical i {
+  background: linear-gradient(90deg, #ff2d4a, #ff6b3d);
+  box-shadow: 0 0 12px rgba(255, 45, 74, 0.55);
+  animation: fuel-blink 0.7s ease-in-out infinite;
+}
+.bar-track.fuel.fuel-empty i {
+  width: 0 !important;
+  box-shadow: none;
+}
+.fuel-pct {
+  font-style: normal;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  margin-left: 6px;
+  color: #ffe6a0;
+  text-shadow: 0 1px 3px #000;
+}
+.bar-fuel .fuel-pct { letter-spacing: 0.02em; }
+.bar-track.fuel.fuel-critical ~ .fuel-pct,
+.bar-fuel:has(.fuel-critical) .fuel-pct { color: #ff8a9a; }
+.bar-fuel:has(.fuel-low) .fuel-pct { color: #ffc078; }
+@keyframes fuel-blink {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.25); }
+}
 
 .nitro-pips {
   display: flex;
@@ -1334,7 +1376,9 @@ body.modo-celular.racing .race-tip span { font-size: 13px; }
   #app.juice-nitro::after,
   #app.juice-hit::after,
   #app.juice-check::after,
-  #app.juice-finish::after {
+  #app.juice-finish::after,
+  #app.juice-pass::after,
+  #app.juice-near::after {
     animation: none !important;
     opacity: 0.22;
   }
@@ -1397,3 +1441,106 @@ body.modo-celular.racing .race-tip span { font-size: 13px; }
   }
 }
 
+
+
+/* wave2: meta diária / pódio / pass+near juice / fuel */
+.meta-soft {
+  margin: 8px 0 14px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: rgba(8, 14, 26, 0.72);
+  border: 1px solid rgba(255, 210, 90, 0.28);
+  color: #f0e6d2 !important;
+  font-weight: 700;
+  font-size: 14px;
+  text-shadow: 0 1px 4px #000;
+  max-width: min(92vw, 420px);
+}
+body.modo-celular .meta-soft { font-size: 13px; padding: 7px 12px; }
+
+.podium {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 10px;
+  margin: 8px 0 16px;
+  flex-wrap: wrap;
+}
+.podium-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 96px;
+  padding: 10px 12px 12px;
+  border-radius: 14px;
+  background: rgba(10, 16, 28, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.35);
+}
+.podium-slot.p1 {
+  order: 2;
+  min-width: 118px;
+  padding-top: 14px;
+  border-color: rgba(255, 210, 90, 0.55);
+  background: linear-gradient(180deg, rgba(255, 210, 90, 0.18), rgba(10, 16, 28, 0.92));
+}
+.podium-slot.p2 { order: 1; border-color: rgba(200, 210, 230, 0.4); }
+.podium-slot.p3 { order: 3; border-color: rgba(205, 140, 80, 0.45); }
+.podium-slot.you { box-shadow: 0 0 0 1px rgba(255, 210, 90, 0.35), 0 10px 24px rgba(0,0,0,0.35); }
+.podium-medal { font-size: 28px; line-height: 1; }
+.podium-slot strong {
+  font-family: "Teko", Impact, sans-serif;
+  font-size: 22px;
+  letter-spacing: 0.04em;
+  color: #fff;
+}
+.podium-slot em {
+  font-style: normal;
+  font-size: 13px;
+  font-weight: 700;
+  color: #f0d78a;
+}
+.board tr.podium-row.p1 td { color: #ffe29a; }
+.board tr.podium-row.p2 td { color: #dce6f5; }
+.board tr.podium-row.p3 td { color: #e8c09a; }
+
+.toast.toast-pass {
+  color: #9dffc2;
+  text-shadow: 0 0 12px rgba(80, 255, 160, 0.45);
+}
+.toast.toast-near {
+  color: #ffd28a;
+  text-shadow: 0 0 12px rgba(255, 180, 60, 0.4);
+}
+
+#app.juice-pass::after,
+#app.juice-near::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  animation: juice-flash 0.45s ease-out forwards;
+}
+#app.juice-pass::after {
+  background: radial-gradient(ellipse at center, rgba(70, 255, 160, 0.26) 0%, transparent 62%);
+}
+#app.juice-near::after {
+  background: radial-gradient(ellipse at 70% 55%, rgba(255, 190, 70, 0.24) 0%, transparent 58%);
+  animation-duration: 0.38s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #app.juice-pass::after,
+  #app.juice-near::after {
+    animation: none !important;
+    opacity: 0.22;
+  }
+  .bar-track.fuel.fuel-critical i {
+    animation: none !important;
+  }
+  .bar-track.fuel i {
+    transition: none !important;
+  }
+}
