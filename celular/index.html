@@ -14,11 +14,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800&family=Teko:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/style.css?v=202610012319" />
+  <link rel="stylesheet" href="../css/style.css?v=202610020205" />
   <script type="importmap">
   {
     "imports": {
-      "three": "../js/vendor/three.module.js?v=202610012319"
+      "three": "../js/vendor/three.module.js?v=202610020205"
     }
   }
   </script>
@@ -64,9 +64,9 @@
               <i></i><i></i><i></i>
             </div>
           </div>
-          <div class="bar">
-            <span>Combustível</span>
-            <div class="bar-track fuel"><i id="hud-fuel"></i></div>
+          <div class="bar bar-fuel">
+            <span>Combustível <em id="hud-fuel-pct" class="fuel-pct">100%</em></span>
+            <div class="bar-track fuel" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100" aria-label="Combustível"><i id="hud-fuel"></i></div>
           </div>
         </div>
         <div class="speedo">
@@ -101,6 +101,7 @@
         <p class="eyebrow">Versão para celular</p>
         <h1>TOP RELÂMPAGO</h1>
         <p class="tagline">A pista vem até você. Vire o celular de lado para correr.</p>
+        <p id="meta-soft" class="meta-soft hint" role="status"></p>
         <div class="menu" id="menu-title">
           <button type="button" data-action="play" class="primary">Jogar</button>
           <button type="button" data-action="howto">Como jogar</button>
@@ -201,6 +202,7 @@
       <div class="screen-inner wide">
         <h2 id="results-title">Chegada</h2>
         <p class="sub" id="results-sub"></p>
+        <div id="results-podium" class="podium hidden" aria-label="Pódio"></div>
         <table class="board" id="results-table"></table>
         <div class="menu">
           <button type="button" data-action="results-next" class="primary">Continuar</button>
@@ -244,6 +246,6 @@
       <button type="button" id="btn-full" title="Tela cheia">Tela cheia</button>
     </div>
   </div>
-  <script type="module" src="../js/app.js?v=202610012319"></script>
+  <script type="module" src="../js/app.js?v=202610020205"></script>
 </body>
 </html>

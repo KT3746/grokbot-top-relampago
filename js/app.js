@@ -1,10 +1,73 @@
-import { CARS, TRACKS, UPGRADES, PRIZE, POINTS, DRIVERS, QUALIFY } from "./data.js?v=202610012319";
-import { AudioBus } from "./audio.js?v=202610012319";
-import { GameEngine } from "./engine.js?v=202610012319";
-import { getModo } from "./modo.js?v=202610012319";
+import { CARS, TRACKS, UPGRADES, PRIZE, POINTS, DRIVERS, QUALIFY } from "./data.js?v=202610020205";
+import { AudioBus } from "./audio.js?v=202610020205";
+import { GameEngine } from "./engine.js?v=202610020205";
+import { getModo } from "./modo.js?v=202610020205";
 
 const SAVE_KEY = "relampago-save";
 const TIP_KEY = "relampago-tip1"; // shared celular/pc — dica do 1º minuto
+const META_KEY = "relampago-meta-v1"; // shared celular/pc — meta diária soft
+
+function brtDayKey() {
+  try {
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Sao_Paulo",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date());
+  } catch {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
+}
+
+function emptyMeta(day = brtDayKey()) {
+  return { day, racesToday: 0, bestTimeToday: null, bestLapToday: null, totalRaces: 0 };
+}
+
+function loadMeta() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(META_KEY));
+    if (!raw || typeof raw !== "object") return emptyMeta();
+    const day = brtDayKey();
+    const totalRaces = Math.max(0, Number(raw.totalRaces) || 0);
+    if (raw.day !== day) {
+      return { day, racesToday: 0, bestTimeToday: null, bestLapToday: null, totalRaces };
+    }
+    return {
+      day,
+      racesToday: Math.max(0, Number(raw.racesToday) || 0),
+      bestTimeToday: raw.bestTimeToday != null ? Number(raw.bestTimeToday) : null,
+      bestLapToday: raw.bestLapToday != null ? Number(raw.bestLapToday) : null,
+      totalRaces,
+    };
+  } catch {
+    return emptyMeta();
+  }
+}
+
+function saveMeta(meta) {
+  try {
+    localStorage.setItem(META_KEY, JSON.stringify(meta));
+  } catch (_) {}
+}
+
+function recordRaceMeta({ time, bestLap }) {
+  const meta = loadMeta();
+  meta.racesToday += 1;
+  meta.totalRaces += 1;
+  const t = Number(time);
+  if (Number.isFinite(t) && t > 0) {
+    if (meta.bestTimeToday == null || t < meta.bestTimeToday) meta.bestTimeToday = t;
+  }
+  const bl = Number(bestLap);
+  if (Number.isFinite(bl) && bl > 0) {
+    if (meta.bestLapToday == null || bl < meta.bestLapToday) meta.bestLapToday = bl;
+  }
+  saveMeta(meta);
+  return meta;
+}
+
 
 function emptyUpgrades() {
   return { engine: 0, tires: 0, nitro: 0 };
@@ -74,6 +137,18 @@ function fmt(t) {
   return `${m}:${s.toFixed(2).padStart(5, "0")}`;
 }
 
+function metaSoftLine(meta = loadMeta()) {
+  if (!meta.racesToday) {
+    return meta.totalRaces
+      ? `Hoje ainda sem corrida · ${meta.totalRaces} no total — bora pra pista`
+      : "Meta do dia: complete sua primeira corrida";
+  }
+  const parts = [`Hoje: ${meta.racesToday} corrida${meta.racesToday === 1 ? "" : "s"}`];
+  if (meta.bestTimeToday != null) parts.push(`melhor ${fmt(meta.bestTimeToday)}`);
+  if (meta.bestLapToday != null) parts.push(`volta ${fmt(meta.bestLapToday)}`);
+  return parts.join(" · ");
+}
+
 function $(id) { return document.getElementById(id); }
 
 function freshView(old) {
@@ -114,6 +189,7 @@ class App {
     this.renderTracks();
     this.renderShop();
     this.show("title");
+    this.refreshMetaSoft();
     this.preview("praia");
     this.refreshCupButton();
     this.loop(performance.now());
@@ -265,6 +341,13 @@ class App {
     addEventListener("pointercancel", onPointerUp, true);
     addEventListener("touchend", onTouchEnd, { capture: true, passive: false });
     addEventListener("touchcancel", onTouchEnd, { capture: true, passive: false });
+  }
+
+  refreshMetaSoft() {
+    const el = $("meta-soft");
+    if (!el) return;
+    el.textContent = metaSoftLine();
+    el.classList.remove("hidden");
   }
 
   ensureRaceTipEl() {
@@ -547,6 +630,7 @@ class App {
     const count = $("countdown");
     const pads = $("pads");
     if (name === "mode") this.refreshCupButton();
+    if (name === "title") this.refreshMetaSoft();
     if (name === "race") {
       hud?.classList.remove("hidden");
       if (this.phone) pads?.classList.remove("hidden");
@@ -557,7 +641,7 @@ class App {
     if (name !== "pause") {
       this.dismissRaceTip(false);
       $("finish-cue")?.classList.add("hidden");
-      $("app")?.classList.remove("juice-nitro", "juice-hit", "juice-check", "juice-finish");
+      $("app")?.classList.remove("juice-nitro", "juice-hit", "juice-check", "juice-finish", "juice-pass", "juice-near");
     }
     hud?.classList.add("hidden");
     count?.classList.add("hidden");
@@ -897,12 +981,36 @@ class App {
     const you = list.find((r) => r.you) || { place: list.length || 8, time: this.engine.time || 0 };
     const prize = PRIZE[(you.place - 1)] || 80;
     this.save.money += prize;
+    try {
+      recordRaceMeta({ time: you.time || this.engine.time || 0, bestLap: this.engine?.bestLap });
+      this.refreshMetaSoft();
+    } catch (_) {}
     const nextBtn = document.querySelector('[data-action="results-next"]');
     const qualified = you.place <= QUALIFY;
     const rows = list.length ? list : [{ place: you.place, name: "Você", car: "", time: you.time, you: true }];
+    const medal = (p) => (p === 1 ? "🥇" : p === 2 ? "🥈" : p === 3 ? "🥉" : "");
+    const podium = rows.filter((r) => r.place >= 1 && r.place <= 3).sort((a, b) => a.place - b.place);
+    const podiumEl = $("results-podium");
+    if (podiumEl) {
+      if (podium.length) {
+        podiumEl.innerHTML = podium.map((r) => (
+          `<div class="podium-slot p${r.place}${r.you ? " you" : ""}">` +
+          `<span class="podium-medal">${medal(r.place)}</span>` +
+          `<strong>${r.name}</strong><em>${fmt(r.time || 0)}</em></div>`
+        )).join("");
+        podiumEl.classList.remove("hidden");
+      } else {
+        podiumEl.innerHTML = "";
+        podiumEl.classList.add("hidden");
+      }
+    }
     const table = `
       <tr><th>#</th><th>Piloto</th><th>Carro</th><th>Tempo</th></tr>
-      ${rows.map((r) => `<tr class="${r.you ? "you" : ""}"><td>${r.place}</td><td>${r.name}</td><td>${r.car || ""}</td><td>${fmt(r.time || 0)}</td></tr>`).join("")}
+      ${rows.map((r) => {
+        const m = medal(r.place);
+        const cls = [r.you ? "you" : "", r.place <= 3 ? `podium-row p${r.place}` : ""].filter(Boolean).join(" ");
+        return `<tr class="${cls}"><td>${m ? `${m} ` : ""}${r.place}</td><td>${r.name}</td><td>${r.car || ""}</td><td>${fmt(r.time || 0)}</td></tr>`;
+      }).join("")}
     `;
     try {
       if (this.cup) {
@@ -928,8 +1036,9 @@ class App {
       } else {
         save(this.save);
       }
-      $("results-title").textContent = you.place === 1 ? "Vitória" : "Chegada";
+      $("results-title").textContent = you.place === 1 ? "Vitória · Pódio" : you.place <= 3 ? "Pódio!" : "Chegada";
       $("results-sub").textContent = `${you.place}º lugar · +$${prize} · ${fmt(you.time || 0)}`;
+      $("results-table")?.classList.toggle("has-podium", you.place <= 3);
       $("results-table").innerHTML = table;
       if (nextBtn) nextBtn.textContent = "Continuar";
     } catch (_) {
@@ -1057,7 +1166,18 @@ class App {
       if (this.phone) nitroLabel.textContent = `Nitro · ${n}`;
       else nitroLabel.innerHTML = `Nitro <kbd>Shift</kbd> <kbd>Espaço</kbd> · ${n}`;
     }
-    $("hud-fuel").style.width = `${Math.round(h.fuel * 100)}%`;
+    const fuelPct = Math.round((h.fuel || 0) * 100);
+    $("hud-fuel").style.width = `${fuelPct}%`;
+    const fuelTrack = $("hud-fuel")?.closest(".bar-track.fuel") || $("hud-fuel")?.parentElement;
+    if (fuelTrack) {
+      fuelTrack.classList.toggle("fuel-critical", fuelPct > 0 && fuelPct <= 12);
+      fuelTrack.classList.toggle("fuel-low", fuelPct > 12 && fuelPct <= 28);
+      fuelTrack.classList.toggle("fuel-ok", fuelPct > 28);
+      fuelTrack.classList.toggle("fuel-empty", fuelPct <= 0);
+      fuelTrack.setAttribute("aria-valuenow", String(fuelPct));
+    }
+    const fuelLbl = $("hud-fuel-pct");
+    if (fuelLbl) fuelLbl.textContent = `${fuelPct}%`;
     const toast = $("toast");
     const showToast = !rotateBlock && h.toast && (h.toast !== "NITRO" || h.boosting);
     if (showToast) {
@@ -1065,6 +1185,8 @@ class App {
       toast.classList.toggle("toast-nitro", h.toast === "NITRO");
       toast.classList.toggle("toast-fuel", h.toast === "TANQUE CHEIO");
       toast.classList.toggle("toast-hit", h.toast === "BATIDA");
+      toast.classList.toggle("toast-pass", h.toast.startsWith("PASSOU") || h.toast === "1º!");
+      toast.classList.toggle("toast-near", h.toast === "QUASE!");
       toast.classList.remove("hidden");
     } else toast.classList.add("hidden");
 
@@ -1113,11 +1235,13 @@ class App {
     if (app) {
       const j = (!rotateBlock && h.juice) || "";
       if (j !== this._lastJuice) {
-        app.classList.remove("juice-nitro", "juice-hit", "juice-check", "juice-finish");
+        app.classList.remove("juice-nitro", "juice-hit", "juice-check", "juice-finish", "juice-pass", "juice-near");
         if (j === "nitro") app.classList.add("juice-nitro");
         else if (j === "hit") app.classList.add("juice-hit");
         else if (j === "check") app.classList.add("juice-check");
         else if (j === "finish") app.classList.add("juice-finish");
+        else if (j === "pass") app.classList.add("juice-pass");
+        else if (j === "near") app.classList.add("juice-near");
         this._lastJuice = j;
       }
     }
@@ -1144,7 +1268,7 @@ async function boot() {
   let renderer3d = null;
   const phone = getModo() === "celular";
   try {
-    const { tryCreateRenderer3D, showWebglFallbackNote } = await import("./render3d.js?v=202610012319");
+    const { tryCreateRenderer3D, showWebglFallbackNote } = await import("./render3d.js?v=202610020205");
     renderer3d = tryCreateRenderer3D(canvas, { phone });
     if (!renderer3d) {
       canvas = freshView(canvas);
