@@ -943,10 +943,26 @@ export class Renderer3D {
 
     if (this.flash) {
       const f = engine.hitFlash || 0;
-      if (f > 0.04) {
+      const juice = engine.juiceT > 0 ? engine.juice : "";
+      if (this.reduceMotion) {
+        // Soft static tint only — no pulsing flash when reduced-motion
+        if (f > 0.2 || juice === "nitro" || juice === "hit" || juice === "check") {
+          this.flash.visible = true;
+          this.flash.material.opacity = 0.06;
+          this.flash.material.color.set(juice === "nitro" ? 0x46c8ff : juice === "check" ? 0xffd266 : 0xffdcd2);
+        } else {
+          this.flash.visible = false;
+          this.flash.material.opacity = 0;
+        }
+      } else if (f > 0.04) {
         this.flash.visible = true;
         this.flash.material.opacity = 0.18 * clamp(f, 0, 1);
         this.flash.material.color.set(kick > 0.2 ? 0x46c8ff : 0xffdcd2);
+      } else if (juice === "nitro" || juice === "check" || juice === "finish") {
+        this.flash.visible = true;
+        const a = clamp(engine.juiceT || 0, 0, 1);
+        this.flash.material.opacity = 0.1 * a;
+        this.flash.material.color.set(juice === "nitro" ? 0x46c8ff : juice === "finish" ? 0xffffff : 0xffd266);
       } else if (kick > 0.08) {
         this.flash.visible = true;
         this.flash.material.opacity = 0.08 * kick;

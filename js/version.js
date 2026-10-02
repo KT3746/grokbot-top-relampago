@@ -1,2 +1,2 @@
 /** Cache-bust: ?v=YYYYMMDDHHMM (hora America/Sao_Paulo). */
-export const CACHE = "202609280150";
+export const CACHE = "202610012319";
