@@ -1,9 +1,10 @@
-import { CARS, TRACKS, UPGRADES, PRIZE, POINTS, DRIVERS, QUALIFY } from "./data.js?v=202609280150";
-import { AudioBus } from "./audio.js?v=202609280150";
-import { GameEngine } from "./engine.js?v=202609280150";
-import { getModo } from "./modo.js?v=202609280150";
+import { CARS, TRACKS, UPGRADES, PRIZE, POINTS, DRIVERS, QUALIFY } from "./data.js?v=202610012319";
+import { AudioBus } from "./audio.js?v=202610012319";
+import { GameEngine } from "./engine.js?v=202610012319";
+import { getModo } from "./modo.js?v=202610012319";
 
 const SAVE_KEY = "relampago-save";
+const TIP_KEY = "relampago-tip1"; // shared celular/pc — dica do 1º minuto
 
 function emptyUpgrades() {
   return { engine: 0, tires: 0, nitro: 0 };
@@ -105,6 +106,9 @@ class App {
     document.body.classList.add(this.phone ? "modo-celular" : "modo-pc");
     this.engine.setPhone(this.phone);
     this._immersive = false;
+    this._tipActive = false;
+    this._tipShownAt = 0;
+    this._lastJuice = "";
     this.bind();
     this.renderCars();
     this.renderTracks();
@@ -261,6 +265,62 @@ class App {
     addEventListener("pointercancel", onPointerUp, true);
     addEventListener("touchend", onTouchEnd, { capture: true, passive: false });
     addEventListener("touchcancel", onTouchEnd, { capture: true, passive: false });
+  }
+
+  ensureRaceTipEl() {
+    let tip = $("race-tip");
+    if (tip) return tip;
+    tip = document.createElement("div");
+    tip.id = "race-tip";
+    tip.className = "race-tip hidden";
+    tip.setAttribute("role", "status");
+    tip.setAttribute("aria-live", "polite");
+    tip.innerHTML = "<strong>Dica</strong><span>Acelera fundo na reta · solta um pouco na curva</span>";
+    ($("app") || document.body).appendChild(tip);
+    return tip;
+  }
+
+  ensureFinishCueEl() {
+    let el = $("finish-cue");
+    if (el) return el;
+    el = document.createElement("div");
+    el.id = "finish-cue";
+    el.className = "finish-cue hidden";
+    el.setAttribute("aria-live", "polite");
+    el.innerHTML = "<span>🏁</span><strong>CHEGADA À FRENTE</strong>";
+    ($("app") || document.body).appendChild(el);
+    return el;
+  }
+
+  showRaceTip() {
+    try {
+      if (localStorage.getItem(TIP_KEY) === "1") {
+        this._tipActive = false;
+        $("race-tip")?.classList.add("hidden");
+        return;
+      }
+    } catch (_) {}
+    const tip = this.ensureRaceTipEl();
+    tip.classList.remove("hidden");
+    this._tipActive = true;
+    this._tipShownAt = performance.now();
+  }
+
+  dismissRaceTip(persist = true) {
+    if (!this._tipActive) return;
+    this._tipActive = false;
+    $("race-tip")?.classList.add("hidden");
+    if (persist) {
+      try { localStorage.setItem(TIP_KEY, "1"); } catch (_) {}
+    }
+  }
+
+  maybeDismissTipFromInput(keys) {
+    if (!this._tipActive || this.screen !== "race") return;
+    if (this.engine.countdown > 0) return;
+    if (keys.up || keys.down || keys.left || keys.right || keys.nitro) {
+      this.dismissRaceTip(true);
+    }
   }
 
   driveKeys() {
@@ -493,6 +553,11 @@ class App {
       else pads?.classList.add("hidden");
       this.syncRotate();
       return;
+    }
+    if (name !== "pause") {
+      this.dismissRaceTip(false);
+      $("finish-cue")?.classList.add("hidden");
+      $("app")?.classList.remove("juice-nitro", "juice-hit", "juice-check", "juice-finish");
     }
     hud?.classList.add("hidden");
     count?.classList.add("hidden");
@@ -820,6 +885,8 @@ class App {
     this.engine.onFinish = (results) => this.finish(results);
     this.engine.startRace(trackId, this.carId, this.save.upgrades, 2);
     this.show("race");
+    this.showRaceTip();
+    this.ensureFinishCueEl();
     this.audio.go();
     try { window.focus(); } catch (_) {}
     try { $("view")?.focus?.(); } catch (_) {}
@@ -946,7 +1013,14 @@ class App {
       this.syncRotate();
       this._wasRotate = rotateBlock;
     }
-    this.engine.setKeys(this.driveKeys());
+    const keys = this.driveKeys();
+    this.engine.setKeys(keys);
+    if (!rotateBlock && this.screen === "race") {
+      this.maybeDismissTipFromInput(keys);
+      if (this._tipActive && this._tipShownAt && (now - this._tipShownAt) > 60000) {
+        this.dismissRaceTip(true);
+      }
+    }
     const liveMenu = this.screen === "title" || this.screen === "cars" || this.screen === "mode" || this.screen === "tracks" || this.screen === "howto" || this.screen === "shop" || this.screen === "standings" || this.screen === "results";
     if (!rotateBlock && (this.screen === "race" || liveMenu)) {
       this.engine.update(dt, dt);
@@ -1034,6 +1108,27 @@ class App {
       cd.classList.add("hidden");
       cd.classList.remove("n3", "n2", "n1", "go");
     }
+    // Soft juice flash (nitro / checkpoint / crash / chegada) — CSS gated by reduced-motion
+    const app = $("app");
+    if (app) {
+      const j = (!rotateBlock && h.juice) || "";
+      if (j !== this._lastJuice) {
+        app.classList.remove("juice-nitro", "juice-hit", "juice-check", "juice-finish");
+        if (j === "nitro") app.classList.add("juice-nitro");
+        else if (j === "hit") app.classList.add("juice-hit");
+        else if (j === "check") app.classList.add("juice-check");
+        else if (j === "finish") app.classList.add("juice-finish");
+        this._lastJuice = j;
+      }
+    }
+
+    const cue = this.ensureFinishCueEl();
+    if (!rotateBlock && h.finishCue && this.screen === "race" && !this.engine.finished) {
+      cue.classList.remove("hidden");
+    } else {
+      cue.classList.add("hidden");
+    }
+
     if (!this.phone || this._frame % 2 === 0) this.engine.renderMinimap($("minimap"));
     this._frame = (this._frame || 0) + 1;
   }
@@ -1049,7 +1144,7 @@ async function boot() {
   let renderer3d = null;
   const phone = getModo() === "celular";
   try {
-    const { tryCreateRenderer3D, showWebglFallbackNote } = await import("./render3d.js?v=202609280150");
+    const { tryCreateRenderer3D, showWebglFallbackNote } = await import("./render3d.js?v=202610012319");
     renderer3d = tryCreateRenderer3D(canvas, { phone });
     if (!renderer3d) {
       canvas = freshView(canvas);

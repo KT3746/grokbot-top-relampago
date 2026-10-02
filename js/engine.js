@@ -1,4 +1,4 @@
-import { CARS, DRIVERS, TRACKS, applyUpgrades } from "./data.js?v=202609280150";
+import { CARS, DRIVERS, TRACKS, applyUpgrades } from "./data.js?v=202610012319";
 
 const SEG = 200;
 const ROAD = 2100;
@@ -656,6 +656,10 @@ export class GameEngine {
     this.sideShock = 0;
     this.hitShake = 0;
     this.hitFlash = 0;
+    this.juice = "";
+    this.juiceT = 0;
+    this._finishCueLatch = false;
+    this.finishCue = false;
     this.time = 0;
     this.lapTime = 0;
     this.bestLap = null;
@@ -744,9 +748,15 @@ export class GameEngine {
     this.fovKick = 1.18;
     p.speed = Math.min(this.maxSpeed(p) * 1.12, p.speed + 110);
     this.audio?.nitro?.();
+    this.pulseJuice("nitro", 0.55);
     this.radioSay("Nitro! Vai fundo!", 1.8);
     p._nitroLatch = true;
     this.keys = { ...this.keys, nitro: true };
+  }
+
+  pulseJuice(kind, dur = 0.45) {
+    this.juice = kind;
+    this.juiceT = Math.max(this.juiceT || 0, dur);
   }
 
   maxSpeed(car) {
@@ -799,7 +809,27 @@ export class GameEngine {
       this._lastPlace = place;
     }
     this.checkLaps();
+    this.updateFinishCue();
     if (this.bumpCool > 0) this.bumpCool -= dt;
+  }
+
+  updateFinishCue() {
+    const p = this.player;
+    if (!p || !this.track || this.finished || p.finished) {
+      this.finishCue = false;
+      return;
+    }
+    const lastLap = (p.laps || 0) >= this.totalLaps - 1;
+    const len = this.track.length;
+    const z = wrapZ(p.z, len);
+    const near = lastLap && z > len * 0.72 && z < len * 0.98;
+    this.finishCue = !!near;
+    if (near && !this._finishCueLatch) {
+      this._finishCueLatch = true;
+      this.radioSay("Linha de chegada à frente!", 1.8);
+      this.pulseJuice("finish", 0.7);
+    }
+    if (!near && (p.laps || 0) < this.totalLaps - 1) this._finishCueLatch = false;
   }
 
   draftBoost() {
@@ -882,6 +912,7 @@ export class GameEngine {
       this.fovKick = 1.18;
       p.speed = Math.min(this.maxSpeed(p) * 1.12, p.speed + 110);
       this.audio?.nitro?.();
+      this.pulseJuice("nitro", 0.55);
       this.radioSay("Nitro! Vai fundo!", 1.8);
     }
     p._nitroLatch = wantNitro;
@@ -1160,6 +1191,10 @@ export class GameEngine {
       }
     }
     this.toastT -= dt;
+    if (this.juiceT > 0) {
+      this.juiceT -= dt;
+      if (this.juiceT <= 0) this.juice = "";
+    }
     if (this.lapFlashT > 0) {
       this.lapFlashT -= dt;
       if (this.lapFlashT <= 0) this.lapFlash = null;
@@ -1435,6 +1470,7 @@ export class GameEngine {
         this.hitFlash = Math.max(this.hitFlash || 0, 0.78);
         this.sideShock = Math.max(this.sideShock || 0, 0.22);
         this.audio?.bump?.();
+        this.pulseJuice("hit", 0.4);
         if (this.toast !== "NITRO") {
           this.toast = "BATIDA";
           this.toastT = 0.5;
@@ -1472,6 +1508,9 @@ export class GameEngine {
         this.player.fuel = 1;
         this._fuelWarn = 0;
         this.audio.pickup?.();
+        this.toast = "TANQUE CHEIO";
+        this.toastT = 0.85;
+        this.pulseJuice("check", 0.55);
         this.radioSay("Tanque cheio!", 1.5);
         return;
       }
@@ -1530,6 +1569,8 @@ export class GameEngine {
             const place = this.livePlace(this.player);
             this.toast = place === 1 ? "VITÓRIA!" : "CHEGADA!";
             this.toastT = 1.4;
+            this.pulseJuice("finish", 1.1);
+            this.finishCue = false;
             const cheers = {
               1: "Bandeirada! Campeão da pista!",
               2: "Chegada! Quase o ouro — brilhante!",
@@ -1605,6 +1646,8 @@ export class GameEngine {
       trackPlace: this.track?.def?.place || "",
       lapFlash: this.lapFlashT > 0 ? this.lapFlash : null,
       radio: this.radioT > 0 && this.radio ? this.radio : "",
+      juice: this.juiceT > 0 && this.juice ? this.juice : "",
+      finishCue: !!this.finishCue,
     };
   }
 

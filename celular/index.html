@@ -14,11 +14,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800&family=Teko:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/style.css?v=202609280150" />
+  <link rel="stylesheet" href="../css/style.css?v=202610012319" />
   <script type="importmap">
   {
     "imports": {
-      "three": "../js/vendor/three.module.js?v=202609280150"
+      "three": "../js/vendor/three.module.js?v=202610012319"
     }
   }
   </script>
@@ -179,11 +179,14 @@
       </div>
     </section>
 
-    <section id="screen-pause" class="screen hidden dim">
-      <div class="screen-inner card-panel">
+    <section id="screen-pause" class="screen hidden dim pause-overlay">
+      <div class="screen-inner card-panel pause-card">
+        <p class="pause-eyebrow">Corrida pausada</p>
         <h2>Pausa</h2>
+        <p class="pause-hint">Toque em Continuar para voltar à pista.</p>
         <ul class="howto compact">
-          <li>Segure Acelera · deite o celular</li>
+          <li>Segure <strong>Acelera</strong> · setas viram · <strong>Nitro</strong> no polegar</li>
+          <li>Deite o celular para ver mais pista</li>
         </ul>
         <div class="menu stacked">
           <button type="button" data-action="resume" class="primary">Continuar</button>
@@ -241,6 +244,6 @@
       <button type="button" id="btn-full" title="Tela cheia">Tela cheia</button>
     </div>
   </div>
-  <script type="module" src="../js/app.js?v=202609280150"></script>
+  <script type="module" src="../js/app.js?v=202610012319"></script>
 </body>
 </html>
