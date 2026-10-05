@@ -14,11 +14,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800&family=Teko:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/style.css?v=202610020205" />
+  <link rel="stylesheet" href="../css/style.css?v=202610052042" />
   <script type="importmap">
   {
     "imports": {
-      "three": "../js/vendor/three.module.js?v=202610020205"
+      "three": "../js/vendor/three.module.js?v=202610052042"
     }
   }
   </script>
@@ -40,6 +40,10 @@
         <div class="hud-card">
           <span class="hud-label">Volta</span>
           <strong id="hud-lap">1<span>/2</span></strong>
+        </div>
+        <div class="hud-card hud-gap is-empty" id="hud-gap-card">
+          <span class="hud-label" id="hud-gap-label">À frente</span>
+          <strong id="hud-gap">—</strong>
         </div>
         <div class="hud-card wide">
           <span class="hud-label">Tempo</span>
@@ -121,6 +125,8 @@
           <li>Polegar esquerdo: virar para os lados.</li>
           <li>Polegar direito: <strong>segure Acelera</strong> (não é só um toque) e use o nitro.</li>
           <li>Cole atrás de um rival para ganhar vácuo (draft) e um pouco mais de velocidade.</li>
+          <li>Placa amarela <strong>CURVA</strong> no meio da tela: a curva está chegando e o botão do lado certo acende. Vermelha = curva forte.</li>
+          <li>No topo, <strong>À frente</strong> mostra quantos segundos faltam para pegar o rival da frente.</li>
           <li>Galão amarelo no meio da pista: passe por cima para encher o tanque. Sem combustível o motor morre.</li>
           <li>No campeonato, precisa chegar em 4º ou melhor para avançar.</li>
           <li>O nitro tem 3 cargas por corrida. Cada toque gasta uma. Solte e aperte de novo para a próxima.</li>
@@ -246,6 +252,6 @@
       <button type="button" id="btn-full" title="Tela cheia">Tela cheia</button>
     </div>
   </div>
-  <script type="module" src="../js/app.js?v=202610020205"></script>
+  <script type="module" src="../js/app.js?v=202610052042"></script>
 </body>
 </html>

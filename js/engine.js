@@ -1,4 +1,4 @@
-import { CARS, DRIVERS, TRACKS, applyUpgrades } from "./data.js?v=202610020205";
+import { CARS, DRIVERS, TRACKS, applyUpgrades } from "./data.js?v=202610052042";
 
 const SEG = 200;
 const ROAD = 2100;
@@ -661,6 +661,8 @@ export class GameEngine {
     this._nearCool = 0;
     this._finishCueLatch = false;
     this.finishCue = false;
+    this.curveWarn = null;
+    this._curveHold = 0;
     this.time = 0;
     this.lapTime = 0;
     this.bestLap = null;
@@ -817,6 +819,7 @@ export class GameEngine {
     this.checkNearMiss(dt);
     this.checkLaps();
     this.updateFinishCue();
+    this.updateCurveWarn(dt);
     if (this.bumpCool > 0) this.bumpCool -= dt;
   }
 
@@ -869,6 +872,56 @@ export class GameEngine {
       this.pulseJuice("finish", 0.7);
     }
     if (!near && (p.laps || 0) < this.totalLaps - 1) this._finishCueLatch = false;
+  }
+
+  // Onda 3: aviso de curva à frente (seta + pad aceso no celular).
+  // curve > 0 = curva para a direita (estrada desloca para a direita ao longe).
+  updateCurveWarn(dt) {
+    const p = this.player;
+    if (!p || !this.track || this.finished || p.finished || this.countdown > 0) {
+      this.curveWarn = null;
+      this._curveHold = 0;
+      return;
+    }
+    const TH = 3.0;
+    const here = this.findSeg(p.z + 2 * SEG).curve || 0;
+    let found = null;
+    for (let k = 8; k <= 72; k++) {
+      const c = this.findSeg(p.z + k * SEG).curve || 0;
+      if (!found) {
+        if (Math.abs(c) >= TH) found = { sign: Math.sign(c), peak: Math.abs(c), k };
+      } else if (Math.sign(c) === found.sign) {
+        found.peak = Math.max(found.peak, Math.abs(c));
+      } else break;
+    }
+    const inside = found && Math.sign(here) === found.sign && Math.abs(here) >= found.peak * 0.6;
+    if (found && !inside) {
+      this.curveWarn = { dir: found.sign > 0 ? "right" : "left", hard: found.peak >= 4.6, k: found.k };
+      this._curveHold = 0.45;
+    } else if (this._curveHold > 0) {
+      this._curveHold -= dt;
+      if (this._curveHold <= 0) this.curveWarn = null;
+    } else {
+      this.curveWarn = null;
+    }
+  }
+
+  // Onda 3: rival imediatamente à frente (ou atrás, se você lidera) em segundos.
+  rivalGap() {
+    const p = this.player;
+    if (!p || !this.track || this.countdown > 0) return null;
+    const pp = this.progress(p);
+    let ahead = null, aD = Infinity, behind = null, bD = Infinity;
+    for (const c of this.cars) {
+      if (c.human) continue;
+      const d = this.progress(c) - pp;
+      if (d > 0 && d < aD) { aD = d; ahead = c; }
+      else if (d <= 0 && -d < bD) { bD = -d; behind = c; }
+    }
+    const v = Math.max(p.speed || 0, 4400);
+    if (ahead) return { ahead: true, name: ahead.name, sec: aD / v };
+    if (behind) return { ahead: false, name: behind.name, sec: bD / v };
+    return null;
   }
 
   draftBoost() {
@@ -1687,6 +1740,8 @@ export class GameEngine {
       radio: this.radioT > 0 && this.radio ? this.radio : "",
       juice: this.juiceT > 0 && this.juice ? this.juice : "",
       finishCue: !!this.finishCue,
+      curveWarn: this.curveWarn || null,
+      gap: this.mode === "race" && !this.finished ? this.rivalGap() : null,
     };
   }
 
