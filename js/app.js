@@ -1,7 +1,7 @@
-import { CARS, TRACKS, UPGRADES, PRIZE, POINTS, DRIVERS, QUALIFY } from "./data.js?v=202610020205";
-import { AudioBus } from "./audio.js?v=202610020205";
-import { GameEngine } from "./engine.js?v=202610020205";
-import { getModo } from "./modo.js?v=202610020205";
+import { CARS, TRACKS, UPGRADES, PRIZE, POINTS, DRIVERS, QUALIFY } from "./data.js?v=202610052042";
+import { AudioBus } from "./audio.js?v=202610052042";
+import { GameEngine } from "./engine.js?v=202610052042";
+import { getModo } from "./modo.js?v=202610052042";
 
 const SAVE_KEY = "relampago-save";
 const TIP_KEY = "relampago-tip1"; // shared celular/pc — dica do 1º minuto
@@ -151,6 +151,22 @@ function metaSoftLine(meta = loadMeta()) {
 
 function $(id) { return document.getElementById(id); }
 
+function fmtGap(sec) {
+  const v = Math.max(0, Math.min(99.9, Number(sec) || 0));
+  return v.toFixed(1).replace(".", ",");
+}
+
+// Onda 3: vibração curta no Android (iPhone ignora navigator.vibrate).
+const BUZZ = {
+  nitro: 35,
+  hit: [45, 35, 45],
+  pass: 22,
+  near: 14,
+  check: 18,
+  finish: [60, 50, 140],
+  go: 60,
+};
+
 function freshView(old) {
   const n = document.createElement("canvas");
   n.id = old?.id || "view";
@@ -184,6 +200,9 @@ class App {
     this._tipActive = false;
     this._tipShownAt = 0;
     this._lastJuice = "";
+    this._lastBuzz = 0;
+    this._gapAt = 0;
+    this._nitroPadN = -1;
     this.bind();
     this.renderCars();
     this.renderTracks();
@@ -373,6 +392,37 @@ class App {
     el.innerHTML = "<span>🏁</span><strong>CHEGADA À FRENTE</strong>";
     ($("app") || document.body).appendChild(el);
     return el;
+  }
+
+  ensureCurveWarnEl() {
+    let el = $("curve-warn");
+    if (el) return el;
+    el = document.createElement("div");
+    el.id = "curve-warn";
+    el.className = "curve-warn hidden";
+    el.setAttribute("aria-hidden", "true");
+    el.innerHTML = '<span class="cw-arrow cw-l">‹‹‹</span><strong>CURVA</strong><span class="cw-arrow cw-r">›››</span>';
+    ($("app") || document.body).appendChild(el);
+    return el;
+  }
+
+  hideCurveWarn() {
+    $("curve-warn")?.classList.add("hidden");
+    document.querySelectorAll(".pad.curve-hint").forEach((el) => el.classList.remove("curve-hint"));
+    this._curveKey = "";
+  }
+
+  buzz(kind) {
+    if (!this.phone) return;
+    const pat = BUZZ[kind];
+    if (!pat || typeof navigator.vibrate !== "function") return;
+    const now = performance.now();
+    if (now - this._lastBuzz < 140) return;
+    // Batidas em sequência no pelotão: no máximo 1 vibração forte a cada 0,9s.
+    if (kind === "hit" && now - (this._lastHitBuzz || 0) < 900) return;
+    if (kind === "hit") this._lastHitBuzz = now;
+    this._lastBuzz = now;
+    try { navigator.vibrate(pat); } catch (_) {}
   }
 
   showRaceTip() {
@@ -643,6 +693,7 @@ class App {
       $("finish-cue")?.classList.add("hidden");
       $("app")?.classList.remove("juice-nitro", "juice-hit", "juice-check", "juice-finish", "juice-pass", "juice-near");
     }
+    this.hideCurveWarn();
     hud?.classList.add("hidden");
     count?.classList.add("hidden");
     $("lap-banner")?.classList.add("hidden");
@@ -971,6 +1022,10 @@ class App {
     this.show("race");
     this.showRaceTip();
     this.ensureFinishCueEl();
+    this.ensureCurveWarnEl();
+    this.hideCurveWarn();
+    this._nitroPadN = -1;
+    this._gapAt = 0;
     this.audio.go();
     try { window.focus(); } catch (_) {}
     try { $("view")?.focus?.(); } catch (_) {}
@@ -1219,8 +1274,10 @@ class App {
       const num = $("countdown-num") || cd;
       if (num.textContent !== label) {
         num.textContent = label;
-        if (label === "VAI") this.audio.go();
-        else this.audio.count();
+        if (label === "VAI") {
+          this.audio.go();
+          this.buzz("go");
+        } else this.audio.count();
       }
       cd.classList.toggle("n3", label === "3");
       cd.classList.toggle("n2", label === "2");
@@ -1242,6 +1299,7 @@ class App {
         else if (j === "finish") app.classList.add("juice-finish");
         else if (j === "pass") app.classList.add("juice-pass");
         else if (j === "near") app.classList.add("juice-near");
+        if (j) this.buzz(j);
         this._lastJuice = j;
       }
     }
@@ -1251,6 +1309,61 @@ class App {
       cue.classList.remove("hidden");
     } else {
       cue.classList.add("hidden");
+    }
+
+    // Onda 3: aviso de curva + pad do lado certo aceso
+    {
+      const cw = this.ensureCurveWarnEl();
+      const w = !rotateBlock && !this.engine.finished && !h.finishCue && !h.lapFlash ? h.curveWarn : null;
+      const key = w ? `${w.dir}${w.hard ? "!" : ""}` : "";
+      if (key !== this._curveKey) {
+        this._curveKey = key;
+        if (w) {
+          cw.classList.remove("hidden", "left", "right", "hard");
+          cw.classList.add(w.dir);
+          if (w.hard) cw.classList.add("hard");
+          cw.querySelector("strong").textContent = w.hard ? "CURVA FORTE" : "CURVA";
+        } else cw.classList.add("hidden");
+        document.querySelectorAll(".pad[data-hold='left'], .pad[data-hold='right']").forEach((el) => {
+          el.classList.toggle("curve-hint", !!w && el.dataset.hold === w.dir);
+        });
+      }
+    }
+
+    // Onda 3: distância para o rival (atualiza ~6x/s para não piscar)
+    if (performance.now() - this._gapAt > 160) {
+      this._gapAt = performance.now();
+      const card = $("hud-gap-card");
+      const g = h.gap;
+      if (card) {
+        if (!g || rotateBlock) {
+          card.classList.add("is-empty");
+          $("hud-gap").textContent = "—";
+        } else {
+          const first = String(g.name || "").split(" ")[0];
+          card.classList.remove("is-empty");
+          card.classList.toggle("is-ahead", g.ahead);
+          card.classList.toggle("is-lead", !g.ahead);
+          card.classList.toggle("is-close", g.ahead && g.sec < 0.6);
+          $("hud-gap-label").textContent = g.ahead ? "À frente" : "Vantagem";
+          const val = g.sec < 0.1 ? "colado" : `${g.ahead ? "+" : "−"}${fmtGap(g.sec)}s`;
+          $("hud-gap").innerHTML = `${val}<span>${first}</span>`;
+        }
+      }
+    }
+
+    // Onda 3: pad de nitro mostra as cargas e apaga quando acaba
+    {
+      const pad = document.querySelector(".pad.nitro");
+      if (pad) {
+        const n = h.nitroCharges ?? 0;
+        if (n !== this._nitroPadN) {
+          this._nitroPadN = n;
+          pad.innerHTML = `<span class="pad-name">Nitro</span><b class="pad-count">${n > 0 ? "●".repeat(n) : "vazio"}</b>`;
+          pad.classList.toggle("empty", n <= 0);
+        }
+        pad.classList.toggle("burning", !rotateBlock && !!h.boosting);
+      }
     }
 
     if (!this.phone || this._frame % 2 === 0) this.engine.renderMinimap($("minimap"));
@@ -1268,7 +1381,7 @@ async function boot() {
   let renderer3d = null;
   const phone = getModo() === "celular";
   try {
-    const { tryCreateRenderer3D, showWebglFallbackNote } = await import("./render3d.js?v=202610020205");
+    const { tryCreateRenderer3D, showWebglFallbackNote } = await import("./render3d.js?v=202610052042");
     renderer3d = tryCreateRenderer3D(canvas, { phone });
     if (!renderer3d) {
       canvas = freshView(canvas);

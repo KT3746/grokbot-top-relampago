@@ -1544,3 +1544,170 @@ body.modo-celular .meta-soft { font-size: 13px; padding: 7px 12px; }
     transition: none !important;
   }
 }
+
+/* wave3: aviso de curva / gap do rival / pad de nitro / rádio sem cobrir HUD */
+.curve-warn {
+  position: absolute;
+  left: 50%;
+  top: 30%;
+  transform: translate(-50%, -50%);
+  z-index: 7;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 16px;
+  border-radius: 999px;
+  background: rgba(8, 14, 24, 0.72);
+  border: 2px solid rgba(255, 210, 90, 0.75);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+}
+.curve-warn strong {
+  font-family: "Teko", Impact, sans-serif;
+  font-size: 26px;
+  line-height: 1;
+  letter-spacing: 0.12em;
+  color: #ffe28a;
+  text-shadow: 0 2px 6px #000;
+}
+.curve-warn .cw-arrow {
+  font-family: "Nunito", system-ui, sans-serif;
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 0.8;
+  color: var(--gold, #f0b429);
+  text-shadow: 0 0 10px rgba(255, 190, 60, 0.6);
+  visibility: hidden;
+}
+.curve-warn.left .cw-l,
+.curve-warn.right .cw-r { visibility: visible; }
+.curve-warn.left .cw-l { animation: cw-nudge-l 0.6s ease-in-out infinite; }
+.curve-warn.right .cw-r { animation: cw-nudge-r 0.6s ease-in-out infinite; }
+.curve-warn.hard {
+  border-color: rgba(255, 110, 80, 0.9);
+  box-shadow: 0 0 22px rgba(255, 90, 60, 0.4), 0 8px 22px rgba(0, 0, 0, 0.4);
+}
+.curve-warn.hard strong { color: #ffc4b8; }
+.curve-warn.hard .cw-arrow { color: #ff7a5c; text-shadow: 0 0 12px rgba(255, 90, 60, 0.7); }
+@keyframes cw-nudge-l { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-6px); } }
+@keyframes cw-nudge-r { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(6px); } }
+
+.pad.curve-hint {
+  border-color: rgba(255, 210, 90, 0.95);
+  background: rgba(60, 44, 8, 0.72);
+  box-shadow: 0 0 0 3px rgba(255, 210, 90, 0.35), 0 0 22px rgba(255, 190, 60, 0.45);
+  animation: pad-hint 0.8s ease-in-out infinite;
+}
+.pad.curve-hint.held { box-shadow: 0 0 0 3px var(--gold, #f0b429); animation: none; }
+@keyframes pad-hint { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.35); } }
+
+.hud-gap { min-width: 104px; }
+.hud-gap strong {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  white-space: nowrap;
+}
+.hud-gap strong span {
+  font-family: "Nunito", system-ui, sans-serif;
+  font-size: 12px !important;
+  font-weight: 800;
+  color: #c9d2e0;
+  max-width: 7ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hud-gap.is-ahead strong { color: #e8fbff; }
+.hud-gap.is-close { border-color: rgba(255, 210, 90, 0.85); }
+.hud-gap.is-close strong { color: #ffe28a; }
+.hud-gap.is-lead { border-color: rgba(61, 214, 140, 0.75); }
+.hud-gap.is-lead strong { color: #8ef5bd; }
+.hud-gap.is-empty strong { color: #c9d2e0; }
+
+.pad.nitro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+.pad.nitro .pad-name,
+.pad.nitro .pad-count { pointer-events: none; }
+.pad.nitro .pad-count {
+  font-size: 15px;
+  line-height: 1;
+  letter-spacing: 0.18em;
+  color: #9cfff8;
+  text-shadow: 0 0 8px rgba(124, 246, 255, 0.7);
+}
+.pad.nitro.empty {
+  background: rgba(40, 40, 56, 0.7);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.55);
+}
+.pad.nitro.empty .pad-count {
+  color: rgba(255, 255, 255, 0.5);
+  text-shadow: none;
+  letter-spacing: 0.04em;
+  font-size: 11px;
+}
+.pad.nitro.burning {
+  box-shadow: 0 0 0 3px rgba(124, 246, 255, 0.7), 0 0 26px rgba(73, 214, 255, 0.55);
+  filter: brightness(1.15);
+}
+
+/* Rádio no celular: lado direito, abaixo do mapa (antes cobria o combustível) */
+body.modo-celular.racing .radio {
+  left: auto;
+  right: max(12px, env(safe-area-inset-right));
+  top: max(132px, calc(env(safe-area-inset-top) + 124px));
+  bottom: auto;
+  max-width: min(44vw, 300px);
+}
+@media (orientation: landscape) and (max-height: 430px) {
+  body.modo-celular.racing .radio {
+    top: max(112px, calc(env(safe-area-inset-top) + 104px));
+    max-width: min(40vw, 260px);
+  }
+  body.modo-celular.racing .hud-gap { min-width: 84px; }
+  body.modo-celular.racing .curve-warn { top: 32%; padding: 4px 12px; }
+  body.modo-celular.racing .curve-warn strong { font-size: 22px; }
+  body.modo-celular.racing .curve-warn .cw-arrow { font-size: 26px; }
+}
+@media (orientation: portrait) and (max-width: 430px) {
+  body.modo-celular.racing .radio { top: max(150px, calc(env(safe-area-inset-top) + 142px)); }
+  body.modo-celular.racing .curve-warn { top: 36%; }
+}
+body.rotate-block #curve-warn { display: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  .curve-warn .cw-arrow,
+  .pad.curve-hint { animation: none !important; }
+}
+
+/* wave3: celular em pé (~390px) — botões do topo empilhados, HUD sem sobrepor, pads sem encavalar */
+@media (orientation: portrait) and (max-width: 430px) {
+  body.modo-celular.racing .top-tools {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    right: max(8px, env(safe-area-inset-right));
+  }
+  body.modo-celular.racing .top-tools button {
+    min-width: 0;
+    width: 92px;
+    min-height: 40px;
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+  body.modo-celular.racing .hud-top { max-width: calc(100% - 118px); }
+  body.modo-celular.racing .hud-bottom { top: max(128px, calc(env(safe-area-inset-top) + 120px)); }
+  body.modo-celular.racing .radio { top: max(112px, calc(env(safe-area-inset-top) + 104px)); max-width: min(46vw, 200px); }
+  body.modo-celular.racing .race-tip { top: max(330px, 42%); }
+  body.modo-celular.racing .hud-card:has(#hud-best) { display: none; }
+  body.modo-celular.racing .curve-warn { top: 41%; }
+  body.modo-celular.racing .pad-cluster.right {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+  }
+}
