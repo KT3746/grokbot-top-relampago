@@ -14,11 +14,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800&family=Teko:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/style.css?v=202610052042" />
+  <link rel="stylesheet" href="../css/style.css?v=202610060510" />
   <script type="importmap">
   {
     "imports": {
-      "three": "../js/vendor/three.module.js?v=202610052042"
+      "three": "../js/vendor/three.module.js?v=202610060510"
     }
   }
   </script>
@@ -76,6 +76,7 @@
         <div class="speedo">
           <strong id="hud-speed">0</strong>
           <em>km/h</em>
+          <span id="draft-chip" class="draft-chip hidden" aria-live="polite">VÁCUO</span>
         </div>
       </div>
       <div id="toast" class="toast hidden"></div>
@@ -94,6 +95,8 @@
       <span class="radio-tag">Rádio</span>
       <span id="radio-msg"></span>
     </div>
+
+    <div id="fuel-alert" class="fuel-alert hidden" aria-live="assertive"><span>⛽</span><strong>TANQUE BAIXO</strong></div>
 
     <div id="countdown" class="countdown hidden" aria-live="polite">
       <div class="lights" aria-hidden="true"><i></i><i></i><i></i></div>
@@ -123,7 +126,9 @@
         <ul class="howto">
           <li>Deite o celular de lado — a pista fica maior.</li>
           <li>Polegar esquerdo: virar para os lados.</li>
-          <li>Polegar direito: <strong>segure Acelera</strong> (não é só um toque) e use o nitro.</li>
+          <li>Polegar direito: <strong>segure Acelera</strong> (não é só um toque), use o <strong>Freio</strong> na curva e o nitro.</li>
+          <li>Na última volta a placa <strong>ÚLTIMA VOLTA</strong> aparece no meio. Tanque baixo mostra aviso grande.</li>
+          <li>Chip <strong>VÁCUO</strong> no velocímetro: você está colado atrás de um rival.</li>
           <li>Cole atrás de um rival para ganhar vácuo (draft) e um pouco mais de velocidade.</li>
           <li>Placa amarela <strong>CURVA</strong> no meio da tela: a curva está chegando e o botão do lado certo acende. Vermelha = curva forte.</li>
           <li>No topo, <strong>À frente</strong> mostra quantos segundos faltam para pegar o rival da frente.</li>
@@ -192,7 +197,7 @@
         <h2>Pausa</h2>
         <p class="pause-hint">Toque em Continuar para voltar à pista.</p>
         <ul class="howto compact">
-          <li>Segure <strong>Acelera</strong> · setas viram · <strong>Nitro</strong> no polegar</li>
+          <li>Segure <strong>Acelera</strong> · <strong>Freio</strong> na curva · setas · <strong>Nitro</strong></li>
           <li>Deite o celular para ver mais pista</li>
         </ul>
         <div class="menu stacked">
@@ -236,6 +241,7 @@
       <div class="pad-cluster right">
         <button type="button" class="pad nitro" data-hold="nitro">Nitro</button>
         <div class="pad-stack">
+          <button type="button" class="pad stop" data-hold="down">Freio</button>
           <button type="button" class="pad go" data-hold="up">Acelera</button>
         </div>
       </div>
@@ -252,6 +258,6 @@
       <button type="button" id="btn-full" title="Tela cheia">Tela cheia</button>
     </div>
   </div>
-  <script type="module" src="../js/app.js?v=202610052042"></script>
+  <script type="module" src="../js/app.js?v=202610060510"></script>
 </body>
 </html>

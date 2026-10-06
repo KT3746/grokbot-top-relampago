@@ -1650,12 +1650,14 @@ export class GameEngine {
           if (this.bestLap == null || finishedLap < this.bestLap) this.bestLap = finishedLap;
           const done = c.laps >= this.totalLaps;
           this.laps = Math.min(this.totalLaps, c.laps + 1);
+          const last = !done && c.laps === this.totalLaps - 1;
           this.lapFlash = {
-            title: done ? "CHEGADA" : `VOLTA ${c.laps}`,
+            title: done ? "CHEGADA" : last ? "ÚLTIMA VOLTA" : `VOLTA ${c.laps}`,
             place: this.livePlace(this.player),
             time: finishedLap,
+            last,
           };
-          this.lapFlashT = done ? 1.8 : 1.5;
+          this.lapFlashT = done ? 1.8 : last ? 2.1 : 1.5;
           this.lapTime = 0;
           if (done) {
             const place = this.livePlace(this.player);
@@ -1672,7 +1674,8 @@ export class GameEngine {
           } else {
             this.toast = "";
             this.toastT = 0;
-            this.radioSay("Volta completa! Mantém o ritmo!", 2.0);
+            if (last) this.radioSay("Última volta! Vai com tudo!", 2.2);
+            else this.radioSay("Volta completa! Mantém o ritmo!", 2.0);
           }
         }
         if (c.laps >= this.totalLaps) {
@@ -1742,6 +1745,10 @@ export class GameEngine {
       finishCue: !!this.finishCue,
       curveWarn: this.curveWarn || null,
       gap: this.mode === "race" && !this.finished ? this.rivalGap() : null,
+      lastLap: !!(p && !p.finished && (p.laps || 0) >= this.totalLaps - 1 && this.totalLaps > 1),
+      fuelAlert: !!(p && !this.finished && p.fuel <= 0.12),
+      fuelEmpty: !!(p && p.fuel <= 0),
+      braking: !!this.keys?.down,
     };
   }
 
