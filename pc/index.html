@@ -11,11 +11,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800&family=Teko:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/style.css?v=202610052042" />
+  <link rel="stylesheet" href="../css/style.css?v=202610060510" />
   <script type="importmap">
   {
     "imports": {
-      "three": "../js/vendor/three.module.js?v=202610052042"
+      "three": "../js/vendor/three.module.js?v=202610060510"
     }
   }
   </script>
@@ -73,6 +73,7 @@
         <div class="speedo">
           <strong id="hud-speed">0</strong>
           <em>km/h</em>
+          <span id="draft-chip" class="draft-chip hidden" aria-live="polite">VÁCUO</span>
         </div>
       </div>
       <div id="toast" class="toast hidden"></div>
@@ -91,6 +92,8 @@
       <span class="radio-tag">Rádio</span>
       <span id="radio-msg"></span>
     </div>
+
+    <div id="fuel-alert" class="fuel-alert hidden" aria-live="assertive"><span>⛽</span><strong>TANQUE BAIXO</strong></div>
 
     <div id="countdown" class="countdown hidden" aria-live="polite">
       <div class="lights" aria-hidden="true"><i></i><i></i><i></i></div>
@@ -127,6 +130,8 @@
           <li>No campeonato, precisa chegar em 4º ou melhor para avançar.</li>
           <li>O nitro tem 3 cargas por corrida. Cada toque no Shift ou Espaço gasta uma. Solte e aperte de novo para a próxima.</li>
           <li>Preencher tela ocupa a área visível. No iPhone a barra do Safari só some em Adicionar à Tela de Início.</li>
+          <li>Na última volta aparece <strong>ÚLTIMA VOLTA</strong>. Tanque baixo mostra aviso grande. Chip <strong>VÁCUO</strong> no velocímetro = draft.</li>
+          <li><kbd>S</kbd> / ↓ freia. <kbd>Shift</kbd> ou Espaço = nitro.</li>
         </ul>
         <p>Fique no asfalto. Curvas fortes puxam o carro. Os rivais fecham a porta. Ganhe dinheiro nas corridas e melhore o carro na oficina.</p>
         <div class="menu">
@@ -228,6 +233,6 @@
       <button type="button" id="btn-full" title="Tela cheia">Tela cheia</button>
     </div>
   </div>
-  <script type="module" src="../js/app.js?v=202610052042"></script>
+  <script type="module" src="../js/app.js?v=202610060510"></script>
 </body>
 </html>

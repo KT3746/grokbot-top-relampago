@@ -203,6 +203,8 @@ class App {
     this._lastBuzz = 0;
     this._gapAt = 0;
     this._nitroPadN = -1;
+    this._lastPlace = 0;
+    this._fuelAlertBuzz = 0;
     this.bind();
     this.renderCars();
     this.renderTracks();
@@ -390,6 +392,18 @@ class App {
     el.className = "finish-cue hidden";
     el.setAttribute("aria-live", "polite");
     el.innerHTML = "<span>🏁</span><strong>CHEGADA À FRENTE</strong>";
+    ($("app") || document.body).appendChild(el);
+    return el;
+  }
+
+  ensureFuelAlertEl() {
+    let el = $("fuel-alert");
+    if (el) return el;
+    el = document.createElement("div");
+    el.id = "fuel-alert";
+    el.className = "fuel-alert hidden";
+    el.setAttribute("aria-live", "assertive");
+    el.innerHTML = "<span>⛽</span><strong>TANQUE BAIXO</strong>";
     ($("app") || document.body).appendChild(el);
     return el;
   }
@@ -691,6 +705,8 @@ class App {
     if (name !== "pause") {
       this.dismissRaceTip(false);
       $("finish-cue")?.classList.add("hidden");
+      $("fuel-alert")?.classList.add("hidden");
+      $("draft-chip")?.classList.add("hidden");
       $("app")?.classList.remove("juice-nitro", "juice-hit", "juice-check", "juice-finish", "juice-pass", "juice-near");
     }
     this.hideCurveWarn();
@@ -1025,6 +1041,8 @@ class App {
     this.ensureCurveWarnEl();
     this.hideCurveWarn();
     this._nitroPadN = -1;
+    this._lastPlace = 0;
+    this._fuelAlertBuzz = 0;
     this._gapAt = 0;
     this.audio.go();
     try { window.focus(); } catch (_) {}
@@ -1364,6 +1382,66 @@ class App {
         }
         pad.classList.toggle("burning", !rotateBlock && !!h.boosting);
       }
+    }
+
+    // Onda 4: freio aceso quando segurado
+    document.querySelectorAll(".pad.stop").forEach((el) => {
+      el.classList.toggle("held", !rotateBlock && !!h.braking);
+    });
+
+    // Onda 4: banner ÚLTIMA VOLTA + card da volta em destaque
+    {
+      const banner = $("lap-banner");
+      if (banner) {
+        const lastFlash = !!(h.lapFlash && h.lapFlash.last);
+        banner.classList.toggle("is-last", lastFlash);
+        if (banner.querySelector(".lap-banner-eyebrow")) {
+          banner.querySelector(".lap-banner-eyebrow").textContent = lastFlash ? "Final" : "Ao vivo";
+        }
+      }
+      const lapCard = $("hud-lap")?.closest(".hud-card");
+      lapCard?.classList.toggle("is-last-lap", !rotateBlock && !!h.lastLap && !h.lapFlash);
+    }
+
+    // Onda 4: chip VÁCUO no velocímetro
+    {
+      const chip = $("draft-chip");
+      if (chip) {
+        const on = !rotateBlock && !!h.drafting && this.screen === "race" && !this.engine.finished;
+        chip.classList.toggle("hidden", !on);
+      }
+    }
+
+    // Onda 4: alerta grande de tanque baixo / vazio
+    {
+      const fa = this.ensureFuelAlertEl();
+      const show = !rotateBlock && this.screen === "race" && !this.engine.finished && !!h.fuelAlert && !h.finishCue && !h.lapFlash;
+      if (show) {
+        const strong = fa.querySelector("strong");
+        if (strong) strong.textContent = h.fuelEmpty ? "SEM COMBUSTÍVEL" : "TANQUE BAIXO";
+        fa.classList.toggle("is-empty", !!h.fuelEmpty);
+        fa.classList.remove("hidden");
+        const now = performance.now();
+        if (now - (this._fuelAlertBuzz || 0) > 2800) {
+          this._fuelAlertBuzz = now;
+          this.buzz("near");
+        }
+      } else {
+        fa.classList.add("hidden");
+      }
+    }
+
+    // Onda 4: posição sobe/desce com flash
+    {
+      const posCard = $("hud-pos")?.closest(".hud-card");
+      const place = h.place || 0;
+      if (posCard && place && this._lastPlace && place !== this._lastPlace && !rotateBlock) {
+        posCard.classList.remove("pos-up", "pos-down");
+        // void: reflow
+        void posCard.offsetWidth;
+        posCard.classList.add(place < this._lastPlace ? "pos-up" : "pos-down");
+      }
+      if (place) this._lastPlace = place;
     }
 
     if (!this.phone || this._frame % 2 === 0) this.engine.renderMinimap($("minimap"));
