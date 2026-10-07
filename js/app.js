@@ -1,7 +1,7 @@
-import { CARS, TRACKS, UPGRADES, PRIZE, POINTS, DRIVERS, QUALIFY } from "./data.js?v=202610052042";
-import { AudioBus } from "./audio.js?v=202610052042";
-import { GameEngine } from "./engine.js?v=202610052042";
-import { getModo } from "./modo.js?v=202610052042";
+import { CARS, TRACKS, UPGRADES, PRIZE, POINTS, DRIVERS, QUALIFY } from "./data.js?v=202610070431";
+import { AudioBus } from "./audio.js?v=202610070431";
+import { GameEngine } from "./engine.js?v=202610070431";
+import { getModo } from "./modo.js?v=202610070431";
 
 const SAVE_KEY = "relampago-save";
 const TIP_KEY = "relampago-tip1"; // shared celular/pc — dica do 1º minuto
@@ -165,6 +165,7 @@ const BUZZ = {
   check: 18,
   finish: [60, 50, 140],
   go: 60,
+  offroad: [18, 40, 18],
 };
 
 function freshView(old) {
@@ -205,6 +206,8 @@ class App {
     this._nitroPadN = -1;
     this._lastPlace = 0;
     this._fuelAlertBuzz = 0;
+    this._offRoadBuzz = 0;
+    this._offRoadOn = false;
     this.bind();
     this.renderCars();
     this.renderTracks();
@@ -404,6 +407,45 @@ class App {
     el.className = "fuel-alert hidden";
     el.setAttribute("aria-live", "assertive");
     el.innerHTML = "<span>⛽</span><strong>TANQUE BAIXO</strong>";
+    ($("app") || document.body).appendChild(el);
+    return el;
+  }
+
+
+  ensureOffroadAlertEl() {
+    let el = $("offroad-alert");
+    if (el) return el;
+    el = document.createElement("div");
+    el.id = "offroad-alert";
+    el.className = "offroad-alert hidden";
+    el.setAttribute("aria-live", "assertive");
+    el.innerHTML = "<span>🌿</span><strong>FORA DA PISTA</strong>";
+    ($("app") || document.body).appendChild(el);
+    return el;
+  }
+
+  ensureLapProgressEl() {
+    let el = $("lap-progress");
+    if (el) return el;
+    el = document.createElement("div");
+    el.id = "lap-progress";
+    el.className = "lap-progress hidden";
+    el.setAttribute("aria-hidden", "true");
+    el.innerHTML = '<div class="lap-progress-track"><i id="lap-progress-fill"></i></div><span class="lap-progress-label">VOLTA</span>';
+    const hud = $("hud");
+    if (hud) hud.appendChild(el);
+    else ($("app") || document.body).appendChild(el);
+    return el;
+  }
+
+  ensureSpeedStreaksEl() {
+    let el = $("speed-streaks");
+    if (el) return el;
+    el = document.createElement("div");
+    el.id = "speed-streaks";
+    el.className = "speed-streaks hidden";
+    el.setAttribute("aria-hidden", "true");
+    el.innerHTML = "<i></i><i></i><i></i><i></i><i></i><i></i>";
     ($("app") || document.body).appendChild(el);
     return el;
   }
@@ -707,7 +749,12 @@ class App {
       $("finish-cue")?.classList.add("hidden");
       $("fuel-alert")?.classList.add("hidden");
       $("draft-chip")?.classList.add("hidden");
-      $("app")?.classList.remove("juice-nitro", "juice-hit", "juice-check", "juice-finish", "juice-pass", "juice-near");
+      $("offroad-alert")?.classList.add("hidden");
+      $("lap-progress")?.classList.add("hidden");
+      $("speed-streaks")?.classList.add("hidden");
+      $("app")?.classList.remove("juice-nitro", "juice-hit", "juice-check", "juice-finish", "juice-pass", "juice-near", "offroad-edge");
+      $("hud-speed")?.classList.remove("spd-cold", "spd-warm", "spd-hot", "spd-red");
+      document.querySelectorAll(".pad.go").forEach((el) => el.classList.remove("holding"));
     }
     this.hideCurveWarn();
     hud?.classList.add("hidden");
@@ -1444,6 +1491,65 @@ class App {
       if (place) this._lastPlace = place;
     }
 
+    // Onda 5: barra de progresso da volta
+    {
+      const bar = this.ensureLapProgressEl();
+      const fill = $("lap-progress-fill");
+      const show = !rotateBlock && this.screen === "race" && !this.engine.finished;
+      bar.classList.toggle("hidden", !show);
+      if (show && fill) {
+        const pct = Math.max(0, Math.min(1, h.lapPct || 0));
+        fill.style.width = `${(pct * 100).toFixed(1)}%`;
+        bar.classList.toggle("is-last", !!h.lastLap);
+        bar.classList.toggle("near-end", pct > 0.82);
+      }
+    }
+
+    // Onda 5: alerta FORA DA PISTA + borda
+    {
+      const oa = this.ensureOffroadAlertEl();
+      const appEl = $("app");
+      const show = !rotateBlock && this.screen === "race" && !this.engine.finished
+        && !!h.offRoad && !h.finishCue && !h.lapFlash && !h.fuelAlert;
+      oa.classList.toggle("hidden", !show);
+      appEl?.classList.toggle("offroad-edge", show);
+      if (show) {
+        const now = performance.now();
+        if (!this._offRoadOn || now - (this._offRoadBuzz || 0) > 2200) {
+          this._offRoadBuzz = now;
+          this.buzz("offroad");
+        }
+      }
+      this._offRoadOn = show;
+    }
+
+    // Onda 5: faixas de cor no velocímetro + anel no Acelera
+    {
+      const spd = $("hud-speed");
+      if (spd) {
+        const pct = h.speedPct || 0;
+        spd.classList.remove("spd-cold", "spd-warm", "spd-hot", "spd-red");
+        if (!rotateBlock && this.screen === "race") {
+          if (pct >= 1.05) spd.classList.add("spd-red");
+          else if (pct >= 0.82) spd.classList.add("spd-hot");
+          else if (pct >= 0.55) spd.classList.add("spd-warm");
+          else spd.classList.add("spd-cold");
+        }
+      }
+      document.querySelectorAll(".pad.go").forEach((el) => {
+        el.classList.toggle("holding", !rotateBlock && !!h.accelerating);
+      });
+    }
+
+    // Onda 5: linhas de velocidade (nitro / alta)
+    {
+      const streaks = this.ensureSpeedStreaksEl();
+      const hot = !rotateBlock && this.screen === "race" && !this.engine.finished
+        && ((h.boosting && (h.speedPct || 0) > 0.4) || (h.speedPct || 0) >= 1.08);
+      streaks.classList.toggle("hidden", !hot);
+      streaks.classList.toggle("nitro", !!h.boosting);
+    }
+
     if (!this.phone || this._frame % 2 === 0) this.engine.renderMinimap($("minimap"));
     this._frame = (this._frame || 0) + 1;
   }
@@ -1459,7 +1565,7 @@ async function boot() {
   let renderer3d = null;
   const phone = getModo() === "celular";
   try {
-    const { tryCreateRenderer3D, showWebglFallbackNote } = await import("./render3d.js?v=202610052042");
+    const { tryCreateRenderer3D, showWebglFallbackNote } = await import("./render3d.js?v=202610070431");
     renderer3d = tryCreateRenderer3D(canvas, { phone });
     if (!renderer3d) {
       canvas = freshView(canvas);

@@ -1749,6 +1749,20 @@ export class GameEngine {
       fuelAlert: !!(p && !this.finished && p.fuel <= 0.12),
       fuelEmpty: !!(p && p.fuel <= 0),
       braking: !!this.keys?.down,
+      // Onda 5
+      offRoad: Math.abs(this.playerX || 0) > 1.02,
+      accelerating: !!this.keys?.up,
+      lapPct: (() => {
+        if (!p || !this.track) return 0;
+        const len = this.track.length || 1;
+        const z = ((p.z % len) + len) % len;
+        return Math.max(0, Math.min(1, z / len));
+      })(),
+      speedPct: (() => {
+        if (!p) return 0;
+        const max = Math.max(1, this.maxSpeed(p));
+        return Math.max(0, Math.min(1.35, (p.speed || 0) / max));
+      })(),
     };
   }
 
