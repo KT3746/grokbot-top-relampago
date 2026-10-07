@@ -11,11 +11,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800&family=Teko:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/style.css?v=202610060510" />
+  <link rel="stylesheet" href="../css/style.css?v=202610070431" />
   <script type="importmap">
   {
     "imports": {
-      "three": "../js/vendor/three.module.js?v=202610060510"
+      "three": "../js/vendor/three.module.js?v=202610070431"
     }
   }
   </script>
@@ -25,6 +25,10 @@
     <canvas id="view" tabindex="0"></canvas>
 
     <div id="hud" class="hud hidden" aria-hidden="true">
+      <div id="lap-progress" class="lap-progress hidden" aria-hidden="true">
+        <div class="lap-progress-track"><i id="lap-progress-fill"></i></div>
+        <span class="lap-progress-label">VOLTA</span>
+      </div>
       <div class="hud-top">
         <div class="hud-card hud-track">
           <span class="hud-label">Pista</span>
@@ -94,6 +98,10 @@
     </div>
 
     <div id="fuel-alert" class="fuel-alert hidden" aria-live="assertive"><span>⛽</span><strong>TANQUE BAIXO</strong></div>
+
+    <div id="offroad-alert" class="offroad-alert hidden" aria-live="assertive"><span>🌿</span><strong>FORA DA PISTA</strong></div>
+
+    <div id="speed-streaks" class="speed-streaks hidden" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
 
     <div id="countdown" class="countdown hidden" aria-live="polite">
       <div class="lights" aria-hidden="true"><i></i><i></i><i></i></div>
@@ -233,6 +241,6 @@
       <button type="button" id="btn-full" title="Tela cheia">Tela cheia</button>
     </div>
   </div>
-  <script type="module" src="../js/app.js?v=202610060510"></script>
+  <script type="module" src="../js/app.js?v=202610070431"></script>
 </body>
 </html>
