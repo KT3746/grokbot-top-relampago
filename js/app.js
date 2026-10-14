@@ -1,7 +1,7 @@
-import { CARS, TRACKS, UPGRADES, PRIZE, POINTS, DRIVERS, QUALIFY } from "./data.js?v=202610070431";
-import { AudioBus } from "./audio.js?v=202610070431";
-import { GameEngine } from "./engine.js?v=202610070431";
-import { getModo } from "./modo.js?v=202610070431";
+import { CARS, TRACKS, UPGRADES, PRIZE, POINTS, DRIVERS, QUALIFY } from "./data.js?v=202610142210";
+import { AudioBus } from "./audio.js?v=202610142210";
+import { GameEngine } from "./engine.js?v=202610142210";
+import { getModo } from "./modo.js?v=202610142210";
 
 const SAVE_KEY = "relampago-save";
 const TIP_KEY = "relampago-tip1"; // shared celular/pc — dica do 1º minuto
@@ -1079,6 +1079,8 @@ class App {
   }
 
   goRace(trackId) {
+    this._lastPlace6 = 0;
+    this._best6 = null;
     this.trackId = trackId;
     this.engine.onFinish = (results) => this.finish(results);
     this.engine.startRace(trackId, this.carId, this.save.upgrades, 2);
@@ -1172,6 +1174,69 @@ class App {
       }
     }
     this.show("results");
+    try { this.celebrateResults(you.place, prize); } catch (_) {}
+  }
+
+  /** Onda 6: faixa dourada grande no meio da tela. */
+  showRecordFlash(text) {
+    let el = $("record-flash");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "record-flash";
+      el.className = "record-flash hidden";
+      el.setAttribute("aria-live", "polite");
+      ($("app") || document.body).appendChild(el);
+    }
+    el.textContent = text;
+    el.classList.remove("hidden", "go");
+    void el.offsetWidth;
+    el.classList.add("go");
+    clearTimeout(this._recT6);
+    this._recT6 = setTimeout(() => el.classList.add("hidden"), 1500);
+  }
+
+  /** Onda 6: confete no pódio + prêmio contando. */
+  celebrateResults(place, prize) {
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const sub = $("results-sub");
+    if (sub && prize > 0) {
+      let chip = $("results-prize");
+      if (!chip) {
+        chip = document.createElement("div");
+        chip.id = "results-prize";
+        chip.className = "results-prize";
+        sub.after(chip);
+      }
+      chip.classList.toggle("gold", place === 1);
+      if (reduce) chip.textContent = `+$${prize}`;
+      else {
+        const t0 = performance.now();
+        const tick = (now) => {
+          const k = Math.min(1, (now - t0) / 900);
+          chip.textContent = `+$${Math.round(prize * (1 - Math.pow(1 - k, 3)))}`;
+          if (k < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      }
+    }
+    if (reduce || place > 3) return;
+    const host = document.body;
+    const colors = place === 1 ? ["#ffd34d", "#fff3b0", "#ff9f1c", "#ffffff"] : ["#38bdf8", "#f472b6", "#a3e635", "#ffd34d"];
+    for (let i = 0; i < (place === 1 ? 70 : 40); i++) {
+      const c = document.createElement("i");
+      c.className = "tr-confetti";
+      c.style.left = `${Math.random() * 100}%`;
+      c.style.background = colors[i % colors.length];
+      host.appendChild(c);
+      c.animate(
+        [
+          { transform: "translateY(-30px) rotate(0)", opacity: 1 },
+          { transform: `translate(${(Math.random() - 0.5) * 140}px, ${window.innerHeight + 40}px) rotate(${Math.random() * 900}deg)`, opacity: 0.9 },
+        ],
+        { duration: 1600 + Math.random() * 1200, delay: Math.random() * 400, easing: "cubic-bezier(.25,.6,.4,1)" },
+      ).onfinish = () => c.remove();
+    }
+    if (place === 1) this.buzz("finish");
   }
 
   afterResults() {
@@ -1298,6 +1363,36 @@ class App {
     }
     const fuelLbl = $("hud-fuel-pct");
     if (fuelLbl) fuelLbl.textContent = `${fuelPct}%`;
+    // Onda 6: seta de posição (ganhou/perdeu lugar) + recorde de volta ao vivo
+    if (!rotateBlock && this.screen === "race") {
+      const pos = $("hud-pos");
+      const card = pos?.closest(".hud-card") || pos;
+      if (this._lastPlace6 && h.place !== this._lastPlace6 && card && h.countdown <= 0) {
+        const up = h.place < this._lastPlace6;
+        card.classList.remove("pos-up", "pos-down");
+        void card.offsetWidth;
+        card.classList.add(up ? "pos-up" : "pos-down");
+        card.dataset.arrow = up ? "▲" : "▼";
+        clearTimeout(this._posT6);
+        this._posT6 = setTimeout(() => card.classList.remove("pos-up", "pos-down"), 900);
+      }
+      this._lastPlace6 = h.place;
+      const bl = h.bestLap;
+      if (bl != null && this._best6 != null && bl < this._best6 - 0.001) {
+        const be = $("hud-best");
+        const bc = be?.closest(".hud-card") || be;
+        if (bc) {
+          bc.classList.remove("lap-record");
+          void bc.offsetWidth;
+          bc.classList.add("lap-record");
+          setTimeout(() => bc.classList.remove("lap-record"), 1800);
+        }
+        this.showRecordFlash("RECORDE DE VOLTA!");
+        this.buzz("pass");
+      }
+      this._best6 = bl;
+    }
+
     const toast = $("toast");
     const showToast = !rotateBlock && h.toast && (h.toast !== "NITRO" || h.boosting);
     if (showToast) {
@@ -1565,7 +1660,7 @@ async function boot() {
   let renderer3d = null;
   const phone = getModo() === "celular";
   try {
-    const { tryCreateRenderer3D, showWebglFallbackNote } = await import("./render3d.js?v=202610070431");
+    const { tryCreateRenderer3D, showWebglFallbackNote } = await import("./render3d.js?v=202610142210");
     renderer3d = tryCreateRenderer3D(canvas, { phone });
     if (!renderer3d) {
       canvas = freshView(canvas);
