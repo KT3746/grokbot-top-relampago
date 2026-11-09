@@ -438,6 +438,18 @@ class App {
     return el;
   }
 
+  /** Onda 7: delta da volta vs ritmo da melhor. */
+  ensureLapDeltaEl() {
+    let el = $("lap-delta");
+    if (el) return el;
+    el = document.createElement("div");
+    el.id = "lap-delta";
+    el.className = "lap-delta hidden";
+    el.setAttribute("aria-live", "polite");
+    ($("hud") || document.body).appendChild(el);
+    return el;
+  }
+
   ensureSpeedStreaksEl() {
     let el = $("speed-streaks");
     if (el) return el;
@@ -752,7 +764,7 @@ class App {
       $("offroad-alert")?.classList.add("hidden");
       $("lap-progress")?.classList.add("hidden");
       $("speed-streaks")?.classList.add("hidden");
-      $("app")?.classList.remove("juice-nitro", "juice-hit", "juice-check", "juice-finish", "juice-pass", "juice-near", "offroad-edge");
+      $("app")?.classList.remove("juice-nitro", "juice-hit", "juice-check", "juice-finish", "juice-pass", "juice-near", "offroad-edge", "is-braking");
       $("hud-speed")?.classList.remove("spd-cold", "spd-warm", "spd-hot", "spd-red");
       document.querySelectorAll(".pad.go").forEach((el) => el.classList.remove("holding"));
     }
@@ -1393,6 +1405,25 @@ class App {
       this._best6 = bl;
     }
 
+    /* Onda 7: delta da volta + freio na tela */
+    {
+      const deltaEl = this.ensureLapDeltaEl();
+      const d = h.lapDelta;
+      const show = !rotateBlock && this.screen === "race" && !this.engine.finished
+        && d != null && Number.isFinite(d) && (h.lapPct || 0) > 0.08;
+      if (show) {
+        const ahead = d <= 0;
+        const abs = Math.abs(d);
+        deltaEl.textContent = `${ahead ? "−" : "+"}${abs.toFixed(2)}`;
+        deltaEl.classList.toggle("ahead", ahead);
+        deltaEl.classList.toggle("behind", !ahead);
+        deltaEl.classList.remove("hidden");
+      } else {
+        deltaEl.classList.add("hidden");
+      }
+      $("app")?.classList.toggle("is-braking", !rotateBlock && !!h.braking && (h.speed || 0) > 18);
+    }
+
     const toast = $("toast");
     const showToast = !rotateBlock && h.toast && (h.toast !== "NITRO" || h.boosting);
     if (showToast) {
@@ -1400,8 +1431,10 @@ class App {
       toast.classList.toggle("toast-nitro", h.toast === "NITRO");
       toast.classList.toggle("toast-fuel", h.toast === "TANQUE CHEIO");
       toast.classList.toggle("toast-hit", h.toast === "BATIDA");
-      toast.classList.toggle("toast-pass", h.toast.startsWith("PASSOU") || h.toast === "1º!");
+      toast.classList.toggle("toast-pass", h.toast.startsWith("PASSOU") || h.toast === "1º!" || h.toast === "LARGADA PERFEITA!");
       toast.classList.toggle("toast-near", h.toast === "QUASE!");
+      toast.classList.toggle("toast-clean", h.toast === "VOLTA LIMPA!");
+      toast.classList.toggle("toast-start", h.toast === "LARGADA PERFEITA!");
       toast.classList.remove("hidden");
     } else toast.classList.add("hidden");
 
@@ -1410,7 +1443,9 @@ class App {
       if (!rotateBlock && h.lapFlash) {
         $("lap-banner-title").textContent = h.lapFlash.title || "VOLTA";
         $("lap-banner-pos").textContent = String(h.lapFlash.place || h.place || 1);
-        $("lap-banner-time").textContent = fmt(h.lapFlash.time || 0);
+        const limpaTxt = h.lapFlash.limpa ? " · limpa" : "";
+        $("lap-banner-time").textContent = `${fmt(h.lapFlash.time || 0)}${limpaTxt}`;
+        banner.classList.toggle("is-limpa", !!h.lapFlash.limpa);
         banner.classList.remove("hidden");
       } else {
         banner.classList.add("hidden");
