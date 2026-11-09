@@ -491,6 +491,7 @@ export class GameEngine {
     this.time = 0;
     this.lapTime = 0;
     this.bestLap = null;
+    this._dirtyLap = false;
     this.laps = 1;
     this.totalLaps = 2;
     this.countdown = 0;
@@ -666,6 +667,8 @@ export class GameEngine {
     this.time = 0;
     this.lapTime = 0;
     this.bestLap = null;
+    this._dirtyLap = false;
+    this._perfectStart = false;
     this.laps = 1;
     this.countdown = 3;
     this.finished = false;
@@ -783,11 +786,21 @@ export class GameEngine {
       return;
     }
     if (this.countdown > 0) {
+      const prevCd = this.countdown;
       this.countdown = Math.max(0, this.countdown - Math.min(0.25, dt));
       this.drivePlayer(dt);
       this.driveAI(dt);
       this.simulateWorld(dt, true, true);
       this.followCamera(dt);
+      /* Onda 7: largada perfeita se acelerar no VAI */
+      if (prevCd > 0 && this.countdown <= 0 && this.keys?.up && this.player) {
+        this.toast = "LARGADA PERFEITA!";
+        this.toastT = 1.25;
+        this.pulseJuice("pass", 0.75);
+        this.player.speed = Math.min(this.maxSpeed(this.player) * 0.72, (this.player.speed || 0) + 160);
+        this.radioSay("Largada perfeita! Que arrancada!", 1.8);
+        this._perfectStart = true;
+      }
       return;
     }
     this.drivePlayer(dt);
@@ -1056,6 +1069,7 @@ export class GameEngine {
     const speedPct = p.speed / Math.max(1, this.maxSpeed(p));
     this.spawnDust(dt, off, speedPct);
     this.updateDust(dt);
+    if (off) this._dirtyLap = true;
     if (off && speedPct > 0.25) this.hitShake = Math.max(this.hitShake || 0, 0.38 * speedPct);
     const want = (right ? 1 : 0) - (left ? 1 : 0);
     // Easy lane changes — strong lateral move even at mid speed.
@@ -1651,14 +1665,25 @@ export class GameEngine {
           const done = c.laps >= this.totalLaps;
           this.laps = Math.min(this.totalLaps, c.laps + 1);
           const last = !done && c.laps === this.totalLaps - 1;
+          const limpa = !this._dirtyLap;
           this.lapFlash = {
             title: done ? "CHEGADA" : last ? "ÚLTIMA VOLTA" : `VOLTA ${c.laps}`,
             place: this.livePlace(this.player),
             time: finishedLap,
             last,
+            limpa,
           };
           this.lapFlashT = done ? 1.8 : last ? 2.1 : 1.5;
           this.lapTime = 0;
+          this._dirtyLap = false;
+          if (limpa && !done) {
+            if (this.toast !== "NITRO" && this.toast !== "LARGADA PERFEITA!") {
+              this.toast = "VOLTA LIMPA!";
+              this.toastT = 1.1;
+            }
+            this.pulseJuice("check", 0.55);
+            this.radioSay("Volta limpa! Sem sai da pista!", 1.6);
+          }
           if (done) {
             const place = this.livePlace(this.player);
             this.toast = place === 1 ? "VITÓRIA!" : "CHEGADA!";
@@ -1735,6 +1760,15 @@ export class GameEngine {
       drafting: (this.draft || 0) > 0.35,
       bestLap: this.bestLap,
       lapTime: this.lapTime,
+      /* Onda 7: delta vs ritmo da melhor volta */
+      lapDelta: (() => {
+        if (this.bestLap == null || !p || !this.track || this.countdown > 0) return null;
+        const len = this.track.length || 1;
+        const z = ((p.z % len) + len) % len;
+        const pct = Math.max(0.05, Math.min(1, z / len));
+        return this.lapTime - this.bestLap * pct;
+      })(),
+      perfectStart: !!this._perfectStart,
       finished: this.finished,
       trackName: this.track?.def?.name || "",
       trackFlag: this.track?.def?.flag || "🏁",

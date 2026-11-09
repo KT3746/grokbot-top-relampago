@@ -30,3 +30,5 @@ São duas versões. Escolha a sua:
 Fique no asfalto. Sem combustível o carro perde força. Latas na pista enchem o tanque.
 
 O jogo tenta desenhar a pista em 3D (Three.js, arquivo local). Se o aparelho não tiver WebGL, cai sozinho no modo clássico 2D.
+
+**Onda 7:** largada perfeita (acelere no VAI), delta da volta vs melhor ritmo, freio com aviso na tela, e selo de volta limpa (sem sair da pista). Cache `?v=202611090920`.
