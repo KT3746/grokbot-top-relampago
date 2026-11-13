@@ -348,6 +348,55 @@ for (let i = 0; i < 90; i++) eOff.update(dt, dt);
 check(Math.abs(eOff.playerX) < 0.95, `off-track pulls back to the road (x ${eOff.playerX.toFixed(2)})`);
 check(eOff.hud().speed > 0 || Math.abs(eOff.playerX) < 0.9, "off-track does not soft-lock in the desert");
 
+/* Onda 8: rivais com o mesmo ritmo em 30, 60 e 120 quadros por segundo. */
+function seeded(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function aiTravel(fps) {
+  const realRandom = Math.random;
+  Math.random = seeded(42);
+  const e = makeEngine();
+  e.keys = { up: true, down: false, left: false, right: false, nitro: false };
+  const step = 1 / fps;
+  const n = Math.round(14 / step);
+  let travel = 0;
+  for (let i = 0; i < n; i++) {
+    const before = e.cars.filter((c) => !c.human).map((c) => c.z);
+    e.update(step, step);
+    e.cars.filter((c) => !c.human).forEach((c, idx) => {
+      let d = c.z - before[idx];
+      if (d < 0) d += e.track.length;
+      travel += d;
+    });
+  }
+  Math.random = realRandom;
+  return travel;
+}
+{
+  const t30 = aiTravel(30);
+  const t60 = aiTravel(60);
+  const t120 = aiTravel(120);
+  const worst = Math.max(Math.abs(t30 / t60 - 1), Math.abs(t120 / t60 - 1));
+  check(worst < 0.04, `rival pace same at 30/60/120 fps (worst ${(worst * 100).toFixed(1)}%)`);
+}
+
+/* Onda 8: nitro antes do VAI não gasta carga. */
+{
+  const eCd = makeEngine();
+  const before = eCd.player.nitroCharges;
+  eCd.keys = { up: true, down: false, left: false, right: false, nitro: true };
+  for (let i = 0; i < 10; i++) eCd.update(dt, dt);
+  eCd.tryNitro();
+  check(eCd.countdown > 0 && eCd.player.nitroCharges === before, `nitro in countdown keeps charges (${before} → ${eCd.player.nitroCharges})`);
+}
+
 if (fail.length) {
   console.log(fail.length + " gates failed");
   process.exit(1);

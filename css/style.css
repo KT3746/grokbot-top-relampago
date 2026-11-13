@@ -2124,3 +2124,49 @@ body.modo-celular .lap-delta {
   #app.is-braking::after { opacity: 0.5; }
   .toast.toast-start { transform: none; }
 }
+
+/* ===== Onda 8 ===== */
+/* Barra da volta dentro do cartão Volta */
+body .hud-card .lap-progress.in-card {
+  position: static;
+  transform: none;
+  width: 100%;
+  min-width: 52px;
+  margin-top: 4px;
+  top: auto;
+  left: auto;
+}
+body .hud-card .lap-progress.in-card.hidden { display: none; }
+body .hud-card .lap-progress.in-card .lap-progress-label { display: none; }
+body .hud-card .lap-progress.in-card .lap-progress-track { height: 4px; }
+
+/* Dica da largada embaixo, sem cobrir o semáforo */
+.race-tip,
+body.modo-celular.racing .race-tip {
+  top: auto;
+  bottom: max(18px, calc(env(safe-area-inset-bottom) + 12px));
+}
+.race-tip span { display: block; }
+.race-tip b { color: #7cf6ff; }
+body.modo-celular.racing .race-tip {
+  max-width: min(46vw, 340px);
+  padding: 8px 12px 10px;
+}
+@media (orientation: portrait) {
+  body.modo-celular.racing .race-tip {
+    max-width: min(92vw, 380px);
+    bottom: max(190px, calc(env(safe-area-inset-bottom) + 180px));
+  }
+}
+
+/* Continuar sempre à vista no resultado, no campeonato e na oficina */
+#screen-results .menu,
+#screen-standings .menu,
+#screen-shop .menu {
+  position: sticky;
+  bottom: calc(-1 * max(16px, env(safe-area-inset-bottom)));
+  z-index: 3;
+  margin-top: 10px;
+  padding: 12px 0 max(12px, env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, rgba(7, 11, 20, 0) 0%, rgba(7, 11, 20, 0.9) 38%, rgba(7, 11, 20, 0.96) 100%);
+}

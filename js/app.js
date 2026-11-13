@@ -1,7 +1,7 @@
-import { CARS, TRACKS, UPGRADES, PRIZE, POINTS, DRIVERS, QUALIFY } from "./data.js?v=202610142210";
-import { AudioBus } from "./audio.js?v=202610142210";
-import { GameEngine } from "./engine.js?v=202610142210";
-import { getModo } from "./modo.js?v=202610142210";
+import { CARS, TRACKS, UPGRADES, PRIZE, POINTS, DRIVERS, QUALIFY } from "./data.js?v=202611122200";
+import { AudioBus } from "./audio.js?v=202611122200";
+import { GameEngine } from "./engine.js?v=202611122200";
+import { getModo } from "./modo.js?v=202611122200";
 
 const SAVE_KEY = "relampago-save";
 const TIP_KEY = "relampago-tip1"; // shared celular/pc — dica do 1º minuto
@@ -382,7 +382,10 @@ class App {
     tip.className = "race-tip hidden";
     tip.setAttribute("role", "status");
     tip.setAttribute("aria-live", "polite");
-    tip.innerHTML = "<strong>Dica</strong><span>Acelera fundo na reta · solta um pouco na curva</span>";
+    /* Onda 8: a dica ensina a largada perfeita e fica embaixo, sem tapar o semáforo. */
+    tip.innerHTML = this.phone
+      ? "<strong>Dica</strong><span>Segure <b>Acelera</b> antes do VAI: largada perfeita.</span><span>Na curva, solte um pouco ou use o Freio.</span>"
+      : "<strong>Dica</strong><span>Segure <b>↑</b> (ou W) antes do VAI: largada perfeita.</span><span>Na curva, solte um pouco ou use ↓ para frear.</span>";
     ($("app") || document.body).appendChild(tip);
     return tip;
   }
@@ -426,7 +429,7 @@ class App {
 
   ensureLapProgressEl() {
     let el = $("lap-progress");
-    if (el) return el;
+    if (el) return this.lapProgressNoCard(el);
     el = document.createElement("div");
     el.id = "lap-progress";
     el.className = "lap-progress hidden";
@@ -435,6 +438,18 @@ class App {
     const hud = $("hud");
     if (hud) hud.appendChild(el);
     else ($("app") || document.body).appendChild(el);
+    return this.lapProgressNoCard(el);
+  }
+
+  /** Onda 8: a barra da volta mora dentro do cartão Volta (não encavala com Tempo/Melhor). */
+  lapProgressNoCard(el) {
+    if (el.classList.contains("in-card")) return el;
+    const card = $("hud-lap")?.closest(".hud-card");
+    if (card) {
+      card.appendChild(el);
+      card.classList.add("has-lap-progress");
+      el.classList.add("in-card");
+    }
     return el;
   }
 
@@ -1695,7 +1710,7 @@ async function boot() {
   let renderer3d = null;
   const phone = getModo() === "celular";
   try {
-    const { tryCreateRenderer3D, showWebglFallbackNote } = await import("./render3d.js?v=202610142210");
+    const { tryCreateRenderer3D, showWebglFallbackNote } = await import("./render3d.js?v=202611122200");
     renderer3d = tryCreateRenderer3D(canvas, { phone });
     if (!renderer3d) {
       canvas = freshView(canvas);

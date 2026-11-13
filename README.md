@@ -31,4 +31,6 @@ Fique no asfalto. Sem combustível o carro perde força. Latas na pista enchem o
 
 O jogo tenta desenhar a pista em 3D (Three.js, arquivo local). Se o aparelho não tiver WebGL, cai sozinho no modo clássico 2D.
 
-**Onda 7:** largada perfeita (acelere no VAI), delta da volta vs melhor ritmo, freio com aviso na tela, e selo de volta limpa (sem sair da pista). Cache `?v=202611090920`.
+**Onda 8:** rivais com o mesmo ritmo em qualquer tela (antes ficavam lentos em computador fraco e rápidos em tela de 120 Hz), nitro antes do VAI não gasta carga, dica da largada embaixo sem tapar o semáforo, barra da volta dentro do cartão Volta e botão Continuar sempre à vista no resultado. Cache `?v=202611122200`.
+
+**Onda 7:** largada perfeita (acelere no VAI), delta da volta vs melhor ritmo, freio com aviso na tela, e selo de volta limpa (sem sair da pista).
