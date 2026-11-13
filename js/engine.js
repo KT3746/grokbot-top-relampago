@@ -1,4 +1,4 @@
-import { CARS, DRIVERS, TRACKS, applyUpgrades } from "./data.js?v=202610052042";
+import { CARS, DRIVERS, TRACKS, applyUpgrades } from "./data.js?v=202611122200";
 
 const SEG = 200;
 const ROAD = 2100;
@@ -18,6 +18,8 @@ const CAR_SIGHT_Z = 1700;
 const NITRO_CHARGES = 3;
 const NITRO_BURST = 1.75;
 const AI_LINES = [-0.70, 0.62, -0.32, 0.38, -0.54, 0.12, 0.78];
+/* Onda 8: velocidade máxima dos rivais por segundo, igual em qualquer taxa de quadros. */
+const AI_STEP_CAP = 6600;
 const AI_SLOTS = [380, 1200, 2400, 3900, 5600, 7400, 9000];
 
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
@@ -747,6 +749,10 @@ export class GameEngine {
   tryNitro() {
     const p = this.player;
     if (!p || this.mode !== "race" || this.finished) return;
+    if (this.countdown > 0) {
+      this.nitroCedo();
+      return;
+    }
     const off = Math.abs(this.playerX) > 1.05;
     if (p._nitroLatch || p.nitroBurst > 0 || p.nitroCharges <= 0 || p.fuel <= 0 || off) return;
     p.nitroCharges -= 1;
@@ -758,6 +764,11 @@ export class GameEngine {
     this.radioSay("Nitro! Vai fundo!", 1.8);
     p._nitroLatch = true;
     this.keys = { ...this.keys, nitro: true };
+  }
+
+  /** Onda 8: nitro antes do VAI não gasta carga; só avisa. */
+  nitroCedo() {
+    this.radioSay("Nitro só depois do VAI! Segure Acelera.", 1.6);
   }
 
   pulseJuice(kind, dur = 0.45) {
@@ -1010,7 +1021,8 @@ export class GameEngine {
     const offAmt = Math.max(0, Math.abs(this.playerX) - 1.02);
     const off = offAmt > 0.03;
     const wantNitro = !!this.keys.nitro;
-    const canFire = wantNitro && !p._nitroLatch && p.nitroBurst <= 0 && p.nitroCharges > 0 && p.fuel > 0 && !off;
+    if (wantNitro && !p._nitroLatch && this.countdown > 0) this.nitroCedo();
+    const canFire = wantNitro && !p._nitroLatch && this.countdown <= 0 && p.nitroBurst <= 0 && p.nitroCharges > 0 && p.fuel > 0 && !off;
     if (canFire) {
       p.nitroCharges -= 1;
       p.nitroBurst = NITRO_BURST * (p.spec.nitroTank || 1);
@@ -1288,7 +1300,9 @@ export class GameEngine {
       for (const c of this.cars) {
         if (c.human) continue;
         c._prevZ = c.z;
-        const step = clamp(c.speed * dt, 0, 4200 * dt + 40);
+        /* Onda 8: teto por segundo (igual ao de 60 Hz). Antes era 4200·dt + 40 por quadro:
+           em tela lenta (30 fps) os rivais ficavam ~10 s mais lentos; em 120 Hz, mais rápidos. */
+        const step = clamp(c.speed * dt, 0, AI_STEP_CAP * dt);
         c.z = wrapZ(c.z + step, len);
       }
     } else {
